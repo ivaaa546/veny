@@ -7,7 +7,7 @@ import StoreProducts from '@/components/storefront/StoreProducts'
 import { MessageCircle } from 'lucide-react'
 import { ShoppingBag } from 'lucide-react'
 
-// Esta función obtiene los datos de la tienda, productos y categorías
+// Esta función obtiene los datos de la tienda, productos, categorías, imágenes y variantes
 async function getStoreData(slug: string) {
     const { data: store } = await supabase
         .from('stores')
@@ -31,7 +31,25 @@ async function getStoreData(slug: string) {
         .eq('store_id', store.id)
         .order('created_at', { ascending: true })
 
-    return { store, products: products || [], categories: categories || [] }
+    // Obtener todas las imágenes de los productos
+    const { data: productImages } = await supabase
+        .from('product_images')
+        .select('*')
+        .in('product_id', products?.map(p => p.id) || [])
+
+    // Obtener todas las variantes de los productos
+    const { data: productVariants } = await supabase
+        .from('product_variants')
+        .select('*')
+        .in('product_id', products?.map(p => p.id) || [])
+
+    return {
+        store,
+        products: products || [],
+        categories: categories || [],
+        productImages: productImages || [],
+        productVariants: productVariants || []
+    }
 }
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -40,7 +58,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
     if (!data) return notFound()
 
-    const { store, products, categories } = data
+    const { store, products, categories, productImages, productVariants } = data
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -81,7 +99,12 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                         <p>Esta tienda aún no tiene productos.</p>
                     </div>
                 ) : (
-                    <StoreProducts products={products} categories={categories} />
+                    <StoreProducts
+                        products={products}
+                        categories={categories}
+                        productImages={productImages}
+                        productVariants={productVariants}
+                    />
                 )}
             </div>
         </div>

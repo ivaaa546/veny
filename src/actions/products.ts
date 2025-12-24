@@ -40,20 +40,27 @@ async function getAuthenticatedSupabase() {
 export async function createProduct(formData: FormData) {
     const { supabase, session } = await getAuthenticatedSupabase()
 
-    // 1. Extraer datos del FormData (que viene de tu <form>)
+    // 1. Extraer datos del FormData
     const title = formData.get('title') as string
     const price = parseFloat(formData.get('price') as string)
+    const description = formData.get('description') as string
     const categoryId = formData.get('category_id') as string
-    const imageUrl = formData.get('image_url') as string
-    const userId = session.user.id // Usar el userId de la sesión autenticada
+    const userId = session.user.id
 
-    // 2. Validaciones básicas
+    // 2. Extraer y parsear datos de imágenes y variantes (JSON strings)
+    const imagesJson = formData.get('images') as string
+    const variantsJson = formData.get('variants') as string
+
+    const images: string[] = imagesJson ? JSON.parse(imagesJson) : []
+    const variants: Array<{ type: string; value: string; priceAdjustment: number }> =
+        variantsJson ? JSON.parse(variantsJson) : []
+
+    // 3. Validaciones básicas
     if (!title || !price || !userId) {
         throw new Error('Faltan datos obligatorios')
     }
 
-    // 3. Buscar el ID de la tienda de este usuario
-    // (Porque el producto pertenece a una tienda, no directamente al usuario)
+    // 4. Buscar el ID de la tienda de este usuario
     const { data: store } = await supabase
         .from('stores')
         .select('id')
@@ -64,29 +71,82 @@ export async function createProduct(formData: FormData) {
         throw new Error('No tienes una tienda creada.')
     }
 
-    // 4. Insertar en Supabase
-    const { error } = await supabase
+    // 5. Insertar el producto BASE y obtener su ID
+    const { data: newProduct, error: productError } = await supabase
         .from('products')
         .insert({
             title,
             price,
-            image_url: imageUrl,
-            category_id: categoryId || null, // Puede ser null
+            description: description || null,
+            category_id: categoryId || null,
             store_id: store.id,
             is_active: true
         })
+        .select('id')
+        .single()
 
-    if (error) {
-        console.error('Error creando producto:', error)
-        throw new Error(`Error al guardar en la base de datos: ${error.message}`)
+    if (productError || !newProduct) {
+        console.error('Error creando producto:', productError)
+        throw new Error(`Error al guardar en la base de datos: ${productError?.message}`)
     }
 
-    // 5. ¡Magia de Next.js! 
-    // Esto borra la caché del dashboard para que el producto nuevo aparezca
-    // instantáneamente sin tener que recargar la página (F5).
-    revalidatePath('/dashboard')
+    const productId = newProduct.id
 
-    // Opcional: Redirigir al usuario de vuelta al dashboard
+    try {
+        // 6. Insertar IMÁGENES en product_images (si existen)
+        if (images.length > 0) {
+            const imageRecords = images.map((url, index) => ({
+                product_id: productId,
+                image_url: url,
+                display_order: index
+            }))
+
+            const { error: imagesError } = await supabase
+                .from('product_images')
+                .insert(imageRecords)
+
+            if (imagesError) {
+                console.error('Error insertando imágenes:', imagesError)
+                // Rollback: eliminar el producto creado
+                await supabase.from('products').delete().eq('id', productId)
+                throw new Error('Error al guardar las imágenes')
+            }
+        }
+
+        // 7. Insertar VARIANTES en product_variants (si existen)
+        if (variants.length > 0) {
+            // Filtrar variantes vacías
+            const validVariants = variants.filter(v => v.type && v.value)
+
+            if (validVariants.length > 0) {
+                const variantRecords = validVariants.map(v => ({
+                    product_id: productId,
+                    variant_type: v.type,
+                    variant_value: v.value,
+                    price_adjustment: v.priceAdjustment || 0
+                }))
+
+                const { error: variantsError } = await supabase
+                    .from('product_variants')
+                    .insert(variantRecords)
+
+                if (variantsError) {
+                    console.error('Error insertando variantes:', variantsError)
+                    // Rollback: eliminar producto e imágenes
+                    await supabase.from('product_images').delete().eq('product_id', productId)
+                    await supabase.from('products').delete().eq('id', productId)
+                    throw new Error('Error al guardar las variantes')
+                }
+            }
+        }
+
+    } catch (error) {
+        // Si algo falla, propagar el error
+        throw error
+    }
+
+    // 8. Revalidar y redirigir
+    revalidatePath('/dashboard')
     redirect('/dashboard')
 }
 
