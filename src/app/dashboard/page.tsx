@@ -1,82 +1,59 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getMyStore } from '@/actions/stores'
-import StoreForm from '@/components/ui/dashboard/StoreForm'
-import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { PlusCircle, ExternalLink } from 'lucide-react'
+import { getDashboardStats } from '@/actions/dashboard'
+import StoreForm from '@/components/ui/dashboard/StoreForm'
+import ShareStoreCard from '@/components/dashboard/ShareStoreCard'
 import LogoutButton from '@/components/ui/dashboard/LogoutButton'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PlusCircle, Package, FolderOpen, ShoppingBag, Settings } from 'lucide-react'
 
 export default async function DashboardPage() {
-    const cookieStore = await cookies()
+    const stats = await getDashboardStats()
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return cookieStore.getAll()
-                },
-                setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        )
-                    } catch {
-                        // The `setAll` method was called from a Server Component.
-                        // This can be ignored if you have middleware refreshing
-                        // user sessions.
-                    }
-                },
-            },
-        }
-    )
+    if (!stats) {
+        redirect('/login')
+    }
 
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) redirect('/login')
-
-    // Buscamos si ya tiene tienda
-    const store = await getMyStore(session.user.id)
+    // CASO 0: Cuenta marcada para eliminación -> Redirigir a recuperación
+    if (stats.storeDeletedAt) {
+        redirect('/recover')
+    }
 
     // CASO 1: Usuario nuevo sin tienda -> Muestra Onboarding
-    if (!store) {
+    if (!stats.store) {
         return (
             <div className="container py-10">
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold">¡Bienvenido a LinkStore! 🚀</h1>
+                    <h1 className="text-3xl font-bold">¡Bienvenido a Veny! 🚀</h1>
                     <p className="text-muted-foreground">Antes de subir productos, necesitamos configurar tu tienda.</p>
                 </div>
-                <StoreForm userId={session.user.id} />
+                <StoreForm userId="" />
             </div>
         )
     }
 
     // CASO 2: Usuario con tienda -> Muestra Dashboard Real
     return (
-        <div className="container py-10 space-y-8">
+        <div className="container mx-auto py-10 px-4 space-y-8">
 
-            {/* Encabezado */}
+            {/* Header con saludo */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">{store.name}</h1>
-                    <a
-                        href={`/${store.slug}`}
-                        target="_blank"
-                        className="text-blue-600 hover:underline flex items-center gap-1 mt-1"
-                    >
-                        Ver mi tienda pública <ExternalLink className="h-4 w-4" />
-                    </a>
+                    <h1 className="text-3xl font-bold">
+                        Hola, {stats.userName} 👋
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                        Bienvenido al panel de <span className="font-medium text-foreground">{stats.store.name}</span>
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <LogoutButton />
-                    {/* Botón para editar tienda (Reusa el form en otra página o modal) */}
                     <Button variant="outline" asChild>
-                        <Link href="/dashboard/settings">Configurar</Link>
+                        <Link href="/dashboard/settings">
+                            <Settings className="mr-2 h-4 w-4" /> Configurar
+                        </Link>
                     </Button>
-                    {/* Botón Acción Principal */}
                     <Button asChild>
                         <Link href="/dashboard/products/new">
                             <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Producto
@@ -85,15 +62,106 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* Aquí podrías poner estadísticas simples */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-6 border rounded-xl bg-gray-50">
-                    <h3 className="font-medium text-muted-foreground">Estado</h3>
-                    <p className="text-2xl font-bold text-green-600">Activa</p>
-                </div>
-                {/* Más tarjetas... */}
-            </div>
+            {/* Grid principal */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
+                {/* Columna izquierda: Estadísticas + Enlaces rápidos */}
+                <div className="lg:col-span-2 space-y-6">
+
+                    {/* Tarjetas de estadísticas */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Total Productos */}
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    Total Productos
+                                </CardTitle>
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold">{stats.totalProducts}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {stats.activeProducts} activos
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Categorías */}
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    Categorías
+                                </CardTitle>
+                                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold">{stats.totalCategories}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    para organizar
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Estado de la tienda */}
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    Estado
+                                </CardTitle>
+                                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className={`text-3xl font-bold ${stats.storeIsActive ? 'text-green-600' : 'text-gray-400'}`}>
+                                    {stats.storeIsActive ? 'Activa' : 'Inactiva'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {stats.storeIsActive ? 'lista para vender' : 'tienda oculta'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Enlaces rápidos */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Acciones Rápidas</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                                    <Link href="/dashboard/products">
+                                        <Package className="h-5 w-5" />
+                                        <span className="text-xs">Productos</span>
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                                    <Link href="/dashboard/categories">
+                                        <FolderOpen className="h-5 w-5" />
+                                        <span className="text-xs">Categorías</span>
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                                    <Link href="/dashboard/products/new">
+                                        <PlusCircle className="h-5 w-5" />
+                                        <span className="text-xs">Nuevo Producto</span>
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                                    <Link href="/dashboard/settings">
+                                        <Settings className="h-5 w-5" />
+                                        <span className="text-xs">Configuración</span>
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Columna derecha: QR para compartir */}
+                <div className="lg:col-span-1">
+                    <ShareStoreCard slug={stats.store.slug} />
+                </div>
+            </div>
         </div>
     )
 }

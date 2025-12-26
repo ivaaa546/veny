@@ -1,17 +1,18 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-interface CartItem {
+export interface CartItem {
     id: string
     title: string
     price: number
     image_url: string | null
     quantity: number
+    selectedVariant?: string
 }
 
 interface CartStore {
     items: CartItem[]
-    addItem: (data: any) => void // 'data' es el producto que viene de la BD
+    addItem: (data: CartItem) => void
     removeItem: (id: string) => void
     clearCart: () => void
     total: number // Calculado dinámicamente

@@ -83,3 +83,29 @@ export async function deleteCategory(categoryId: string) {
 
     revalidatePath('/dashboard/categories')
 }
+
+// 4. Actualizar categoría
+export async function updateCategory(formData: FormData) {
+    const supabase = await getSupabaseClient()
+
+    const categoryId = formData.get('category_id') as string
+    const name = formData.get('name') as string
+
+    if (!categoryId || !name) {
+        throw new Error('Faltan datos obligatorios')
+    }
+
+    const { error } = await supabase
+        .from('categories')
+        .update({ name })
+        .eq('id', categoryId)
+
+    if (error) {
+        console.error('Error al actualizar categoría:', error)
+        throw new Error('Error al actualizar categoría')
+    }
+
+    revalidatePath('/dashboard/categories')
+    revalidatePath('/dashboard/products/new')
+    revalidatePath('/dashboard/products')
+}

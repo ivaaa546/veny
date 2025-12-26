@@ -1,17 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getMyStore } from '@/actions/stores'
-import { getCategories, createCategory, deleteCategory } from '@/actions/categories'
+import { Trash2, FolderOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Trash2, Plus } from 'lucide-react'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import { deleteCategory } from '@/actions/categories'
+import CreateCategoryDialog from '@/components/dashboard/CreateCategoryDialog'
+import EditCategoryDialog from '@/components/dashboard/EditCategoryDialog'
 
-export default async function CategoriesPage() {
+async function getSupabaseClient() {
     const cookieStore = await cookies()
-
-    const supabase = createServerClient(
+    return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
@@ -25,87 +31,129 @@ export default async function CategoriesPage() {
                             cookieStore.set(name, value, options)
                         )
                     } catch {
-                        // Ignorar errores de escritura de cookies en Server Components
+                        // Ignorar errores en Server Components
                     }
                 },
             },
         }
     )
+}
 
+function formatDate(dateString: string) {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-GT', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    })
+}
+
+export default async function CategoriesPage() {
+    const supabase = await getSupabaseClient()
+
+    // Verificar autenticación
     const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) redirect('/login')
+    if (!session) {
+        redirect('/login')
+    }
 
     // Obtener la tienda del usuario
-    const store = await getMyStore(session.user.id)
+    const { data: store } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single()
 
-    if (!store) redirect('/dashboard')
+    if (!store) {
+        redirect('/dashboard')
+    }
 
-    // Obtener las categorías de la tienda
-    const categories = await getCategories(store.id)
+    // Obtener categorías
+    const { data: categories } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('store_id', store.id)
+        .order('created_at', { ascending: true })
 
     return (
-        <div className="container max-w-2xl py-10">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold">Categorías</h1>
-                <p className="text-muted-foreground">Gestiona las etiquetas para agrupar tus productos.</p>
+        <div className="container mx-auto py-10 px-4">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Organiza tus productos en categorías
+                    </p>
+                </div>
+                <CreateCategoryDialog storeId={store.id} />
             </div>
 
-            {/* 1. FORMULARIO PARA AGREGAR (Con Server Action) */}
-            <Card className="mb-8 border-dashed border-2 bg-gray-50/50">
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Crear Nueva Categoría</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form action={createCategory} className="flex gap-2">
-                        {/* Pasamos el ID de la tienda oculto */}
-                        <input type="hidden" name="store_id" value={store.id} />
+            {/* Contenido */}
+            {!categories || categories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-lg">
+                    <FolderOpen className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No tienes categorías</h3>
+                    <p className="text-muted-foreground text-center mb-6 max-w-sm">
+                        Las categorías te ayudan a organizar tus productos y facilitan la navegación para tus clientes.
+                    </p>
+                    <CreateCategoryDialog storeId={store.id} />
+                </div>
+            ) : (
+                <div className="border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nombre</TableHead>
+                                <TableHead>Fecha de creación</TableHead>
+                                <TableHead className="text-right w-24">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {categories.map((category) => (
+                                <TableRow key={category.id}>
+                                    {/* Nombre */}
+                                    <TableCell className="font-medium">
+                                        {category.name}
+                                    </TableCell>
 
-                        <Input
-                            name="name"
-                            placeholder="Ej: Hamburguesas, Bebidas..."
-                            required
-                            className="bg-white"
-                        />
-                        <Button type="submit">
-                            <Plus className="h-4 w-4 mr-2" /> Agregar
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+                                    {/* Fecha */}
+                                    <TableCell className="text-muted-foreground">
+                                        {formatDate(category.created_at)}
+                                    </TableCell>
 
-            {/* 2. LISTA DE CATEGORÍAS */}
-            <div className="space-y-3">
-                {categories.length === 0 ? (
-                    <div className="text-center py-10 border rounded-lg bg-white">
-                        <p className="text-muted-foreground">No tienes categorías aún.</p>
-                        <p className="text-sm text-gray-400">Agrega una arriba para empezar.</p>
-                    </div>
-                ) : (
-                    categories.map((cat: any) => (
-                        <div
-                            key={cat.id}
-                            className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                        >
-                            <span className="font-medium pl-2 border-l-4 border-black">{cat.name}</span>
+                                    {/* Acciones */}
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <EditCategoryDialog category={{ id: category.id, name: category.name }} />
+                                            <form action={async () => {
+                                                'use server'
+                                                await deleteCategory(category.id)
+                                            }}>
+                                                <Button
+                                                    type="submit"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    title="Eliminar categoría"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </form>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
 
-                            {/* Botón de Borrar (Server Action Inline) */}
-                            <form action={async () => {
-                                'use server'
-                                await deleteCategory(cat.id)
-                            }}>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </form>
-                        </div>
-                    ))
-                )}
-            </div>
+            {/* Contador */}
+            {categories && categories.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-4">
+                    {categories.length} {categories.length === 1 ? 'categoría' : 'categorías'}
+                </p>
+            )}
         </div>
     )
 }

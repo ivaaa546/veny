@@ -165,6 +165,7 @@ export async function deleteProduct(productId: string) {
 
     // 2. Refrescar la pantalla
     revalidatePath('/dashboard')
+    revalidatePath('/dashboard/products')
 }
 
 export async function toggleProductStatus(productId: string, currentStatus: boolean) {
@@ -179,4 +180,127 @@ export async function toggleProductStatus(productId: string, currentStatus: bool
     if (error) throw new Error('Error actualizando estado')
 
     revalidatePath('/dashboard')
+}
+
+export async function updateProduct(formData: FormData) {
+    const { supabase } = await getAuthenticatedSupabase()
+
+    // 1. Extraer datos del FormData
+    const productId = formData.get('product_id') as string
+    const title = formData.get('title') as string
+    const price = parseFloat(formData.get('price') as string)
+    const description = formData.get('description') as string
+    const categoryId = formData.get('category_id') as string
+
+    // 2. Extraer y parsear datos de imágenes y variantes (JSON strings)
+    const imagesJson = formData.get('images') as string
+    const variantsJson = formData.get('variants') as string
+
+    const newImages: string[] = imagesJson ? JSON.parse(imagesJson) : []
+    const variants: Array<{ type: string; value: string; priceAdjustment: number }> =
+        variantsJson ? JSON.parse(variantsJson) : []
+
+    // 3. Validaciones básicas
+    if (!productId || !title || !price) {
+        throw new Error('Faltan datos obligatorios')
+    }
+
+    // 4. Actualizar el producto BASE
+    const { error: productError } = await supabase
+        .from('products')
+        .update({
+            title,
+            price,
+            description: description || null,
+            category_id: categoryId || null,
+        })
+        .eq('id', productId)
+
+    if (productError) {
+        console.error('Error actualizando producto:', productError)
+        throw new Error(`Error al actualizar: ${productError.message}`)
+    }
+
+    // 5. VARIANTES: Borrar las antiguas e insertar las nuevas
+    // Primero eliminamos todas las variantes existentes
+    const { error: deleteVariantsError } = await supabase
+        .from('product_variants')
+        .delete()
+        .eq('product_id', productId)
+
+    if (deleteVariantsError) {
+        console.error('Error eliminando variantes antiguas:', deleteVariantsError)
+    }
+
+    // Insertar las nuevas variantes (si existen)
+    if (variants.length > 0) {
+        const validVariants = variants.filter(v => v.type && v.value)
+
+        if (validVariants.length > 0) {
+            const variantRecords = validVariants.map(v => ({
+                product_id: productId,
+                variant_type: v.type,
+                variant_value: v.value,
+                price_adjustment: v.priceAdjustment || 0
+            }))
+
+            const { error: variantsError } = await supabase
+                .from('product_variants')
+                .insert(variantRecords)
+
+            if (variantsError) {
+                console.error('Error insertando variantes:', variantsError)
+                throw new Error('Error al guardar las variantes')
+            }
+        }
+    }
+
+    // 6. IMÁGENES: Insertar las nuevas imágenes (sin borrar las existentes)
+    if (newImages.length > 0) {
+        // Obtener el máximo display_order actual
+        const { data: existingImages } = await supabase
+            .from('product_images')
+            .select('display_order')
+            .eq('product_id', productId)
+            .order('display_order', { ascending: false })
+            .limit(1)
+
+        const maxOrder = existingImages?.[0]?.display_order ?? -1
+
+        const imageRecords = newImages.map((url, index) => ({
+            product_id: productId,
+            image_url: url,
+            display_order: maxOrder + 1 + index
+        }))
+
+        const { error: imagesError } = await supabase
+            .from('product_images')
+            .insert(imageRecords)
+
+        if (imagesError) {
+            console.error('Error insertando imágenes:', imagesError)
+            throw new Error('Error al guardar las imágenes')
+        }
+    }
+
+    // 7. Revalidar y redirigir
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/products')
+    revalidatePath(`/dashboard/products/${productId}`)
+    redirect('/dashboard/products')
+}
+
+export async function deleteProductImage(imageId: string, productId: string) {
+    const { supabase } = await getAuthenticatedSupabase()
+
+    const { error } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('id', imageId)
+
+    if (error) {
+        throw new Error('No se pudo borrar la imagen')
+    }
+
+    revalidatePath(`/dashboard/products/${productId}`)
 }

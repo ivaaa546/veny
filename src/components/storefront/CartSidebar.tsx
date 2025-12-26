@@ -2,11 +2,11 @@
 
 import { ShoppingBag, Trash2 } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
-import { generateWhatsAppLink } from '@/lib/whatsapp'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
+import CheckoutDialog from './CheckoutDialog'
 
 interface CartSidebarProps {
     storePhone: string
@@ -18,11 +18,6 @@ export default function CartSidebar({ storePhone, children }: CartSidebarProps) 
 
     // Calculamos el total
     const total = cart.items.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0)
-
-    const handleCheckout = () => {
-        const link = generateWhatsAppLink(storePhone, cart.items)
-        window.open(link, '_blank')
-    }
 
     return (
         <Sheet>
@@ -55,6 +50,9 @@ export default function CartSidebar({ storePhone, children }: CartSidebarProps) 
                                         {/* Info */}
                                         <div className="flex-1">
                                             <h4 className="font-medium text-sm line-clamp-2">{item.title}</h4>
+                                            {item.selectedVariant && (
+                                                <p className="text-xs text-muted-foreground">{item.selectedVariant}</p>
+                                            )}
                                             <p className="text-sm text-gray-500">
                                                 {item.quantity} x Q{item.price}
                                             </p>
@@ -83,12 +81,14 @@ export default function CartSidebar({ storePhone, children }: CartSidebarProps) 
                             <span>Total:</span>
                             <span>Q{total.toFixed(2)}</span>
                         </div>
-                        <Button
-                            className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg"
-                            onClick={handleCheckout}
+                        <CheckoutDialog
+                            storePhone={storePhone}
+                            total={total}
                         >
-                            Completar Pedido por WhatsApp
-                        </Button>
+                            <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg">
+                                Completar Pedido por WhatsApp
+                            </Button>
+                        </CheckoutDialog>
                     </div>
                 )}
             </SheetContent>

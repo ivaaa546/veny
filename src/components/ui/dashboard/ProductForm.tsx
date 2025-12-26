@@ -1,20 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { createProduct } from '@/actions/products'
+import { createProduct, updateProduct, deleteProductImage } from '@/actions/products'
 import { supabase } from '@/lib/supabase'
 import { Loader2, UploadCloud, X, Plus, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-interface ProductFormProps {
-    userId: string
-    categories: Array<{ id: string; name: string }>
-}
 
 interface Variant {
     type: string
@@ -22,16 +18,42 @@ interface Variant {
     priceAdjustment: number
 }
 
-export default function ProductForm({ userId, categories }: ProductFormProps) {
-    const [loading, setLoading] = useState(false)
-    const [selectedCategory, setSelectedCategory] = useState<string>('')
+interface ExistingImage {
+    id: string
+    url: string
+}
 
-    // Estados para múltiples imágenes
+interface InitialData {
+    id: string
+    title: string
+    price: number
+    description: string
+    category_id: string
+    variants: Variant[]
+    images: ExistingImage[]
+}
+
+interface ProductFormProps {
+    userId: string
+    categories: Array<{ id: string; name: string }>
+    initialData?: InitialData
+}
+
+export default function ProductForm({ userId, categories, initialData }: ProductFormProps) {
+    const isEditMode = !!initialData
+
+    const [loading, setLoading] = useState(false)
+    const [selectedCategory, setSelectedCategory] = useState<string>(initialData?.category_id || '')
+
+    // Estados para múltiples imágenes (nuevas a subir)
     const [imageFiles, setImageFiles] = useState<File[]>([])
     const [previewUrls, setPreviewUrls] = useState<string[]>([])
 
+    // Imágenes existentes (solo en modo edición)
+    const [existingImages, setExistingImages] = useState<ExistingImage[]>(initialData?.images || [])
+
     // Estados para variantes
-    const [variants, setVariants] = useState<Variant[]>([])
+    const [variants, setVariants] = useState<Variant[]>(initialData?.variants || [])
 
     // Manejar múltiples imágenes
     const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,10 +65,22 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
         }
     }
 
-    // Eliminar una imagen específica
-    const removeImage = (index: number) => {
+    // Eliminar una imagen nueva (no subida aún)
+    const removeNewImage = (index: number) => {
         setImageFiles(prev => prev.filter((_, i) => i !== index))
         setPreviewUrls(prev => prev.filter((_, i) => i !== index))
+    }
+
+    // Eliminar una imagen existente (del servidor)
+    const removeExistingImage = async (imageId: string) => {
+        if (!initialData) return
+        try {
+            await deleteProductImage(imageId, initialData.id)
+            setExistingImages(prev => prev.filter(img => img.id !== imageId))
+        } catch (error) {
+            console.error('Error eliminando imagen:', error)
+            alert('No se pudo eliminar la imagen')
+        }
     }
 
     // Agregar nueva variante
@@ -73,7 +107,7 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
         try {
             const formData = new FormData(e.currentTarget)
 
-            // 1. Subir TODAS las imágenes a Supabase Storage
+            // 1. Subir TODAS las imágenes NUEVAS a Supabase Storage
             const imageUrls: string[] = []
 
             for (const file of imageFiles) {
@@ -99,12 +133,17 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
             formData.set('variants', JSON.stringify(variants))
             formData.set('user_id', userId)
 
-            // 3. Llamar al Server Action
-            await createProduct(formData)
+            // 3. Llamar al Server Action correspondiente
+            if (isEditMode && initialData) {
+                formData.set('product_id', initialData.id)
+                await updateProduct(formData)
+            } else {
+                await createProduct(formData)
+            }
 
         } catch (error) {
             console.error(error)
-            const errorMessage = error instanceof Error ? error.message : 'Error al crear el producto'
+            const errorMessage = error instanceof Error ? error.message : 'Error al guardar el producto'
             alert(errorMessage)
         } finally {
             setLoading(false)
@@ -117,13 +156,27 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
             {/* Nombre del Producto */}
             <div className="space-y-2">
                 <Label htmlFor="title">Nombre del Producto</Label>
-                <Input id="title" name="title" placeholder="Ej: Hamburguesa Doble" required />
+                <Input
+                    id="title"
+                    name="title"
+                    placeholder="Ej: Hamburguesa Doble"
+                    defaultValue={initialData?.title || ''}
+                    required
+                />
             </div>
 
             {/* Precio Base */}
             <div className="space-y-2">
                 <Label htmlFor="price">Precio Base (Q)</Label>
-                <Input id="price" name="price" type="number" step="0.01" placeholder="50.00" required />
+                <Input
+                    id="price"
+                    name="price"
+                    type="number"
+                    step="0.01"
+                    placeholder="50.00"
+                    defaultValue={initialData?.price || ''}
+                    required
+                />
             </div>
 
             {/* Descripción */}
@@ -135,6 +188,7 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
                     placeholder="Describe tu producto, ingredientes, características, etc."
                     rows={4}
                     className="resize-none"
+                    defaultValue={initialData?.description || ''}
                 />
                 <p className="text-xs text-muted-foreground">Opcional - Ayuda a tus clientes a conocer mejor el producto</p>
             </div>
@@ -145,30 +199,65 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
                     <CardTitle className="text-lg">Fotografías del Producto</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Grilla de Previsualizaciones */}
-                    {previewUrls.length > 0 && (
-                        <div className="grid grid-cols-3 gap-4">
-                            {previewUrls.map((url, index) => (
-                                <div key={index} className="relative group">
-                                    <img
-                                        src={url}
-                                        alt={`Preview ${index + 1}`}
-                                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => removeImage(index)}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                    <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                                        #{index + 1}
+                    {/* Grilla de Imágenes Existentes (solo en modo edición) */}
+                    {existingImages.length > 0 && (
+                        <div>
+                            <p className="text-sm text-muted-foreground mb-2">Imágenes actuales:</p>
+                            <div className="grid grid-cols-3 gap-4">
+                                {existingImages.map((img, index) => (
+                                    <div key={img.id} className="relative group">
+                                        <Image
+                                            src={img.url}
+                                            alt={`Imagen ${index + 1}`}
+                                            width={200}
+                                            height={128}
+                                            className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => removeExistingImage(img.id)}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                        <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                            #{index + 1}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Grilla de Previsualizaciones de nuevas imágenes */}
+                    {previewUrls.length > 0 && (
+                        <div>
+                            <p className="text-sm text-muted-foreground mb-2">Nuevas imágenes a subir:</p>
+                            <div className="grid grid-cols-3 gap-4">
+                                {previewUrls.map((url, index) => (
+                                    <div key={index} className="relative group">
+                                        <img
+                                            src={url}
+                                            alt={`Preview ${index + 1}`}
+                                            className="w-full h-32 object-cover rounded-lg border-2 border-green-300"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => removeNewImage(index)}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                        <div className="absolute bottom-1 left-1 bg-green-600 text-white text-xs px-2 py-1 rounded">
+                                            Nueva
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 
@@ -281,7 +370,7 @@ export default function ProductForm({ userId, categories }: ProductFormProps) {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
                     </>
                 ) : (
-                    'Crear Producto'
+                    isEditMode ? 'Guardar Cambios' : 'Crear Producto'
                 )}
             </Button>
         </form>
