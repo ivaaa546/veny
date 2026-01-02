@@ -3,6 +3,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { extractStoragePath, deleteFromStorage } from '@/lib/supabase'
 
 // Helper para crear cliente Supabase
 async function getSupabaseClient() {
@@ -230,6 +231,13 @@ export async function updateStoreSettings(formData: FormData) {
         }
     }
 
+    // Obtener URLs actuales antes de actualizar (para eliminar del storage)
+    const { data: currentStoreData } = await supabase
+        .from('stores')
+        .select('logo_url, banner_url')
+        .eq('id', storeId)
+        .single()
+
     // Parsear logo URL si viene
     let logoUrl: string | null = null
     if (logoUrlJson) {
@@ -261,11 +269,27 @@ export async function updateStoreSettings(formData: FormData) {
     // Solo actualizar logo si viene uno nuevo
     if (logoUrl) {
         updateData.logo_url = logoUrl
+        
+        // Si hay un logo antiguo y es diferente al nuevo, eliminarlo del storage
+        if (currentStoreData?.logo_url && currentStoreData.logo_url !== logoUrl) {
+            const oldLogoPath = extractStoragePath(currentStoreData.logo_url)
+            if (oldLogoPath) {
+                await deleteFromStorage(supabase, oldLogoPath)
+            }
+        }
     }
 
     // Solo actualizar banner si viene uno nuevo
     if (bannerUrl) {
         updateData.banner_url = bannerUrl
+        
+        // Si hay un banner antiguo y es diferente al nuevo, eliminarlo del storage
+        if (currentStoreData?.banner_url && currentStoreData.banner_url !== bannerUrl) {
+            const oldBannerPath = extractStoragePath(currentStoreData.banner_url)
+            if (oldBannerPath) {
+                await deleteFromStorage(supabase, oldBannerPath)
+            }
+        }
     }
 
     const { error } = await supabase

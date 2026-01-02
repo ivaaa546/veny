@@ -28,6 +28,7 @@ async function getSupabaseClient() {
 }
 
 export interface DashboardStats {
+    userId: string
     store: {
         id: string
         name: string
@@ -62,6 +63,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
 
     if (!store) {
         return {
+            userId: session.user.id,
             store: null,
             totalProducts: 0,
             activeProducts: 0,
@@ -92,6 +94,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
         .eq('store_id', store.id)
 
     return {
+        userId: session.user.id,
         store,
         totalProducts: totalProducts || 0,
         activeProducts: activeProducts || 0,

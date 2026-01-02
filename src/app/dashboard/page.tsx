@@ -28,7 +28,7 @@ export default async function DashboardPage() {
                     <h1 className="text-3xl font-bold">¡Bienvenido a Veny! 🚀</h1>
                     <p className="text-muted-foreground">Antes de subir productos, necesitamos configurar tu tienda.</p>
                 </div>
-                <StoreForm userId="" />
+                <StoreForm userId={stats.userId} />
             </div>
         )
     }

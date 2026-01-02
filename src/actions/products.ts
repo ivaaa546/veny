@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { extractStoragePath, deleteMultipleFromStorage } from '@/lib/supabase'
 
 // Función helper para obtener el cliente de Supabase autenticado
 async function getAuthenticatedSupabase() {
@@ -153,17 +154,51 @@ export async function createProduct(formData: FormData) {
 export async function deleteProduct(productId: string) {
     const { supabase } = await getAuthenticatedSupabase()
 
-    // 1. Borrar de Supabase
+    // 1. Obtener todas las imágenes del producto antes de eliminarlo
+    const { data: product } = await supabase
+        .from('products')
+        .select('image_url')
+        .eq('id', productId)
+        .single()
+
+    const { data: productImages } = await supabase
+        .from('product_images')
+        .select('image_url')
+        .eq('product_id', productId)
+
+    // 2. Eliminar el producto de la base de datos
+    // Esto eliminará automáticamente las variantes e imágenes por CASCADE
     const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', productId)
 
     if (error) {
-        throw new Error('No se pudo borrar el producto')
+        console.error('Error borrando producto:', error)
+        throw new Error(`No se pudo borrar el producto: ${error.message}`)
     }
 
-    // 2. Refrescar la pantalla
+    // 3. Eliminar archivos del storage (después de borrar el producto)
+    const imagesToDelete: (string | null)[] = []
+
+    // Agregar imagen principal del producto
+    if (product?.image_url) {
+        imagesToDelete.push(extractStoragePath(product.image_url))
+    }
+
+    // Agregar imágenes adicionales
+    if (productImages && productImages.length > 0) {
+        productImages.forEach(img => {
+            imagesToDelete.push(extractStoragePath(img.image_url))
+        })
+    }
+
+    // Eliminar todas las imágenes del storage
+    if (imagesToDelete.length > 0) {
+        await deleteMultipleFromStorage(supabase, imagesToDelete)
+    }
+
+    // 4. Refrescar la pantalla
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/products')
 }
@@ -293,6 +328,14 @@ export async function updateProduct(formData: FormData) {
 export async function deleteProductImage(imageId: string, productId: string) {
     const { supabase } = await getAuthenticatedSupabase()
 
+    // 1. Obtener la URL de la imagen antes de eliminarla
+    const { data: image } = await supabase
+        .from('product_images')
+        .select('image_url')
+        .eq('id', imageId)
+        .single()
+
+    // 2. Eliminar la imagen de la base de datos
     const { error } = await supabase
         .from('product_images')
         .delete()
@@ -300,6 +343,14 @@ export async function deleteProductImage(imageId: string, productId: string) {
 
     if (error) {
         throw new Error('No se pudo borrar la imagen')
+    }
+
+    // 3. Eliminar el archivo del storage
+    if (image?.image_url) {
+        const filePath = extractStoragePath(image.image_url)
+        if (filePath) {
+            await deleteMultipleFromStorage(supabase, [filePath])
+        }
     }
 
     revalidatePath(`/dashboard/products/${productId}`)
