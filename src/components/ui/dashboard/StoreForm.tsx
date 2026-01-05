@@ -41,24 +41,19 @@ export default function StoreForm({ userId, store }: { userId: string, store?: a
                 <CardContent className="space-y-4">
 
                     <div className="space-y-2">
-                        <Label>Nombre del Negocio</Label>
-                        <Input name="name" defaultValue={store?.name} placeholder="Ej: Hamburguesas Don Pepe" required />
+                        <Label htmlFor="name">Nombre de la tienda</Label>
+                        <Input name="name" defaultValue={store?.name} placeholder="Ej: Boutique Elegance" required />
                     </div>
-
                     <div className="space-y-2">
-                        <Label>Tu Link Personalizado (Slug)</Label>
-                        <div className="flex items-center">
-                            <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-500">
-                                linkstore.app/
-                            </span>
+                        <Label htmlFor="slug">Slug de la tienda (URL)</Label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-sm">linkstore.site/</span>
                             <Input
+                                id="slug"
                                 name="slug"
                                 defaultValue={store?.slug}
-                                placeholder="hamburguesas-pepe"
-                                className="rounded-l-none"
+                                placeholder="boutique-elegance"
                                 required
-                                pattern="[a-z0-9-]+"
-                                title="Solo letras minúsculas, números y guiones"
                             />
                         </div>
                         <p className="text-xs text-muted-foreground">Este será el enlace que compartirás.</p>

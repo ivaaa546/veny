@@ -35,8 +35,8 @@ export default function ShareStoreCard({ slug }: ShareStoreCardProps) {
     }
 
     return (
-        <Card className="h-full">
-            <CardHeader className="text-center">
+        <Card className="shadow-sm">
+            <CardHeader className="text-center pb-2">
                 <CardTitle className="text-xl">Comparte tu Tienda</CardTitle>
                 <CardDescription>
                     Escanea el código QR o comparte el enlace
@@ -44,11 +44,11 @@ export default function ShareStoreCard({ slug }: ShareStoreCardProps) {
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Código QR */}
-                <div className="flex justify-center p-4 bg-white rounded-lg border">
+                <div className="flex justify-center p-4 bg-white rounded-xl border shadow-sm max-w-[180px] mx-auto">
                     {storeUrl && (
                         <QRCode
                             value={storeUrl}
-                            size={180}
+                            size={140}
                             style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                             viewBox={`0 0 256 256`}
                         />

@@ -133,8 +133,8 @@ export default function ProductDetailsModal({
                                                         setSelectedVariant(prev => prev === variant.id ? null : variant.id)
                                                     }}
                                                     className={`px-3 py-1.5 text-sm rounded-md border transition-all ${selectedVariant === variant.id
-                                                            ? 'border-black bg-black text-white shadow-sm'
-                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                        ? 'border-black bg-black text-white shadow-sm'
+                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                         }`}
                                                 >
                                                     {variant.variant_value}
@@ -156,9 +156,13 @@ export default function ProductDetailsModal({
                         <div className="pt-4">
                             <AddToCartButton
                                 product={{
-                                    ...product,
+                                    id: product.id,
+                                    title: product.title,
                                     price: finalPrice,
+                                    image_url: productImages[0] || product.image_url,
                                     selectedVariant: selectedVariantData
+                                        ? `${selectedVariantData.variant_type}: ${selectedVariantData.variant_value}`
+                                        : undefined
                                 }}
                             />
                         </div>

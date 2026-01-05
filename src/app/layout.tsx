@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Veny - Tu tienda online",
-  description: "Crea tu tienda online y vende por WhatsApp",
+  title: "goveny",
+  description: "Crea tu tienda online y vende más",
 };
 
 export default function RootLayout({

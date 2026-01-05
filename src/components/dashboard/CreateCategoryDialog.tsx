@@ -67,12 +67,12 @@ export default function CreateCategoryDialog({ storeId }: CreateCategoryDialogPr
                         <div className="space-y-2">
                             <Label htmlFor="category-name">Nombre</Label>
                             <Input
-                                id="category-name"
-                                placeholder="Ej: Hamburguesas, Bebidas, Postres..."
+                                id="name"
+                                name="name"
+                                placeholder="Ej: Nueva Colección, Accesorios, Temporada..."
+                                required
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                disabled={loading}
-                                autoFocus
                             />
                         </div>
                     </div>

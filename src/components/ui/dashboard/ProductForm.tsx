@@ -141,10 +141,18 @@ export default function ProductForm({ userId, categories, initialData }: Product
                 await createProduct(formData)
             }
 
-        } catch (error) {
+        } catch (error: any) {
+            // Ignorar el error de redirección de Next.js (es el comportamiento esperado de éxito)
+            if (error.message === 'NEXT_REDIRECT' || error.digest === 'NEXT_REDIRECT') {
+                return
+            }
+
             console.error(error)
             const errorMessage = error instanceof Error ? error.message : 'Error al guardar el producto'
-            alert(errorMessage)
+            // Usar un toast en lugar de alert si es posible, o simplemente filtrar este error
+            if (!errorMessage.includes('NEXT_REDIRECT')) {
+                 alert(errorMessage)
+            }
         } finally {
             setLoading(false)
         }
@@ -159,7 +167,7 @@ export default function ProductForm({ userId, categories, initialData }: Product
                 <Input
                     id="title"
                     name="title"
-                    placeholder="Ej: Hamburguesa Doble"
+                    placeholder="Ej: Playera Oversize Cotton"
                     defaultValue={initialData?.title || ''}
                     required
                 />
@@ -173,7 +181,7 @@ export default function ProductForm({ userId, categories, initialData }: Product
                     name="price"
                     type="number"
                     step="0.01"
-                    placeholder="50.00"
+                    placeholder="149.00"
                     defaultValue={initialData?.price || ''}
                     required
                 />
@@ -185,7 +193,7 @@ export default function ProductForm({ userId, categories, initialData }: Product
                 <Textarea
                     id="description"
                     name="description"
-                    placeholder="Describe tu producto, ingredientes, características, etc."
+                    placeholder="Describe tu producto, materiales, guía de tallas, etc."
                     rows={4}
                     className="resize-none"
                     defaultValue={initialData?.description || ''}

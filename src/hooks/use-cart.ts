@@ -10,9 +10,12 @@ export interface CartItem {
     selectedVariant?: string
 }
 
+// Tipo para agregar items (sin quantity, se agrega automáticamente)
+export type CartItemInput = Omit<CartItem, 'quantity'>
+
 interface CartStore {
     items: CartItem[]
-    addItem: (data: CartItem) => void
+    addItem: (data: CartItemInput) => void
     removeItem: (id: string) => void
     clearCart: () => void
     total: number // Calculado dinámicamente
@@ -24,22 +27,34 @@ export const useCart = create(
             items: [],
             total: 0,
 
-            addItem: (data: any) => {
+            addItem: (data: CartItemInput) => {
                 const currentItems = get().items
-                const existingItem = currentItems.find((item) => item.id === data.id)
+
+                // Limpiar el item para asegurar que selectedVariant sea string
+                const cleanData: CartItemInput = {
+                    id: data.id,
+                    title: data.title,
+                    price: Number(data.price),
+                    image_url: data.image_url,
+                    selectedVariant: typeof data.selectedVariant === 'string'
+                        ? data.selectedVariant
+                        : undefined
+                }
+
+                const existingItem = currentItems.find((item) => item.id === cleanData.id)
 
                 if (existingItem) {
                     // Si ya existe, aumentamos cantidad
                     set({
                         items: currentItems.map((item) =>
-                            item.id === data.id
+                            item.id === cleanData.id
                                 ? { ...item, quantity: item.quantity + 1 }
                                 : item
                         ),
                     })
                 } else {
                     // Si es nuevo, lo agregamos con quantity: 1
-                    set({ items: [...currentItems, { ...data, quantity: 1 }] })
+                    set({ items: [...currentItems, { ...cleanData, quantity: 1 }] })
                 }
             },
 
@@ -52,6 +67,20 @@ export const useCart = create(
         {
             name: 'cart-storage', // Nombre en localStorage
             storage: createJSONStorage(() => localStorage),
+            // Migración para limpiar datos antiguos
+            onRehydrateStorage: () => (state) => {
+                if (state?.items) {
+                    // Limpiar items con selectedVariant como objeto
+                    state.items = state.items
+                        .map((item: any) => ({
+                            ...item,
+                            selectedVariant: typeof item.selectedVariant === 'string'
+                                ? item.selectedVariant
+                                : undefined
+                        }))
+                        .filter((item: any) => item.id && item.title && item.price)
+                }
+            }
         }
     )
 )

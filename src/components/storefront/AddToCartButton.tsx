@@ -7,7 +7,16 @@ export default function AddToCartButton({ product }: { product: any }) {
     const cart = useCart()
 
     const handleAddToCart = () => {
-        cart.addItem(product)
+        // Limpiar el objeto del producto para solo incluir los campos necesarios
+        const cleanProduct = {
+            id: product.id,
+            title: product.title,
+            price: Number(product.price),
+            image_url: product.image_url || null,
+            selectedVariant: product.selectedVariant || undefined
+        }
+
+        cart.addItem(cleanProduct)
         toast.success('Agregado al carrito', {
             description: product.title,
             duration: 2000,

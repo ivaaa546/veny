@@ -4,87 +4,32 @@ import { supabase } from '@/lib/supabase'
 import { formatPhoneForWhatsApp } from '@/lib/phone'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-// IMPORTANTE: Importamos tus nuevos componentes
-import CartSidebar from '@/components/storefront/CartSidebar'
 import StoreProducts from '@/components/storefront/StoreProducts'
-import { MessageCircle, ShoppingBag, Store } from 'lucide-react'
+import StoreNavbar from '@/components/storefront/StoreNavbar'
+import { MessageCircle, Store, MapPin } from 'lucide-react'
 
-// Esta función obtiene los datos de la tienda, productos, categorías, imágenes y variantes
+// --- DATA FETCHING ---
 async function getStoreData(slug: string) {
-    // Primero buscar la tienda por slug actual
-    const { data: store } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('slug', slug)
-        .single()
-
-    // Si no existe, verificar si hay un redirect
+    const { data: store } = await supabase.from('stores').select('*').eq('slug', slug).single()
     if (!store) {
-        const { data: redirectData } = await supabase
-            .from('store_redirects')
-            .select('store_id, stores(slug, is_active, deleted_at)')
-            .eq('old_slug', slug)
-            .single()
-
+        const { data: redirectData } = await supabase.from('store_redirects').select('store_id, stores(slug, is_active, deleted_at)').eq('old_slug', slug).single()
         if (redirectData?.stores) {
             const storeData = redirectData.stores as unknown as { slug: string; is_active: boolean; deleted_at: string | null }
-            // Si la tienda redirecteada está inactiva o eliminada, retornar inactive
-            if (!storeData.is_active || storeData.deleted_at) {
-                return { inactive: true }
-            }
-            // Retornar info para redirect
+            if (!storeData.is_active || storeData.deleted_at) return { inactive: true }
             return { redirect: storeData.slug }
         }
         return null
     }
-
-    // Verificar si la tienda está inactiva o marcada para eliminación
-    if (store.is_active === false || store.deleted_at) {
-        return { inactive: true }
-    }
-
-    // Obtener productos activos
-    const { data: products } = await supabase
-        .from('products')
-        .select('*')
-        .eq('store_id', store.id)
-        .eq('is_active', true)
-
-    // Obtener categorías de la tienda
-    const { data: categories } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('store_id', store.id)
-        .order('created_at', { ascending: true })
-
-    // Obtener todas las imágenes de los productos
-    const { data: productImages } = await supabase
-        .from('product_images')
-        .select('*')
-        .in('product_id', products?.map(p => p.id) || [])
-
-    // Obtener todas las variantes de los productos
-    const { data: productVariants } = await supabase
-        .from('product_variants')
-        .select('*')
-        .in('product_id', products?.map(p => p.id) || [])
-
-    return {
-        store,
-        products: products || [],
-        categories: categories || [],
-        productImages: productImages || [],
-        productVariants: productVariants || []
-    }
+    if (store.is_active === false || store.deleted_at) return { inactive: true }
+    const { data: products } = await supabase.from('products').select('*').eq('store_id', store.id).eq('is_active', true)
+    const { data: categories } = await supabase.from('categories').select('*').eq('store_id', store.id).order('created_at', { ascending: true })
+    const { data: productImages } = await supabase.from('product_images').select('*').in('product_id', products?.map(p => p.id) || [])
+    const { data: productVariants } = await supabase.from('product_variants').select('*').in('product_id', products?.map(p => p.id) || [])
+    return { store, products: products || [], categories: categories || [], productImages: productImages || [], productVariants: productVariants || [] }
 }
 
 function getInitials(name: string) {
-    return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
 }
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -92,30 +37,14 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
     const data = await getStoreData(slug)
 
     if (!data) return notFound()
-
-    // Si hay redirect, redirigir al nuevo slug
-    if ('redirect' in data) {
-        redirect(`/${data.redirect}`)
-    }
-
-    // Si la tienda está inactiva o marcada para eliminación
+    if ('redirect' in data) redirect(`/${data.redirect}`)
     if ('inactive' in data) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
                 <div className="text-center max-w-md">
-                    <div className="mb-6">
-                        <Store className="h-20 w-20 mx-auto text-gray-300" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-800 mb-2">
-                        Tienda no disponible
-                    </h1>
-                    <p className="text-gray-500 mb-6">
-                        Esta tienda no está disponible en este momento.
-                        Es posible que haya sido desactivada temporalmente.
-                    </p>
-                    <Button asChild variant="outline">
-                        <a href="/">Volver al inicio</a>
-                    </Button>
+                    <div className="mb-6"><Store className="h-16 w-16 mx-auto text-green-600" /></div>
+                    <h1 className="text-xl font-bold text-gray-800 mb-2">Tienda no disponible</h1>
+                    <Button asChild variant="outline"><a href="/">Volver al inicio</a></Button>
                 </div>
             </div>
         )
@@ -124,98 +53,60 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
     const { store, products, categories, productImages, productVariants } = data
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="min-h-screen bg-gray-50/50 relative">
+            
+            {/* 1. NAVBAR */}
+            <StoreNavbar 
+                storeName={store.name}
+                storePhone={store.phone}
+                categories={categories}
+            />
 
-            {/* 1. HEADER CON CARRITO FUNCIONAL */}
-            <div className="bg-white shadow-sm sticky top-0 z-20">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {/* Logo en el header */}
-                        <Avatar className="h-9 w-9">
-                            {store.logo_url ? (
-                                <AvatarImage src={store.logo_url} alt={store.name} />
-                            ) : null}
-                            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                                {getInitials(store.name)}
+            {/* 2. BANNER */}
+            <div className="relative w-full h-[22vh] md:h-[28vh] bg-slate-900 overflow-hidden mt-16">
+                {store.banner_url ? (
+                    <Image src={store.banner_url} alt={store.name} fill className="object-cover opacity-80" priority />
+                ) : (
+                    <div className="absolute inset-0 bg-black" />
+                )}
+            </div>
+
+            {/* 3. STORE PROFILE CARD */}
+            <div className="container mx-auto px-6 md:px-12 lg:px-20 relative z-10 -mt-12 mb-10">
+                <div className="bg-white rounded-xl shadow-md border border-slate-100 p-5 md:p-6 flex flex-col md:flex-row items-center gap-5 max-w-5xl mx-auto">
+                    <div className="relative shrink-0">
+                        <Avatar className="h-16 w-16 md:h-20 md:w-20 rounded-xl border-4 border-white shadow-sm bg-white">
+                            {store.logo_url && <AvatarImage src={store.logo_url} alt={store.name} className="object-cover" />}
+                            <AvatarFallback className="text-lg bg-slate-100 text-green-600 rounded-xl font-bold">
+                                <Store className="h-8 w-8" />
                             </AvatarFallback>
                         </Avatar>
-                        <h1 className="font-bold text-xl truncate">{store.name}</h1>
                     </div>
-
-                    {/* Envolvemos el botón de la bolsa con tu Sidebar */}
-                    <CartSidebar storePhone={store.phone}>
-                        <Button size="icon" variant="ghost" className="relative">
-                            <ShoppingBag className="h-6 w-6" />
-                            {/* Un punto rojo decorativo (Más adelante lo haremos contador real) */}
-                            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+                    <div className="flex-1 text-center md:text-left">
+                        <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight">{store.name}</h1>
+                        {store.description && (
+                            <p className="text-slate-500 text-xs md:text-sm mt-1 max-w-lg leading-relaxed">{store.description}</p>
+                        )}
+                    </div>
+                    <div className="w-full md:w-auto">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-full w-full md:w-auto px-6 h-9 text-xs font-semibold shadow-sm" asChild>
+                            <a href={`https://wa.me/${formatPhoneForWhatsApp(store.phone)}`} target="_blank">
+                                <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
+                            </a>
                         </Button>
-                    </CartSidebar>
-                </div>
-            </div>
-
-            {/* BANNER DE TIENDA */}
-            <div className="relative">
-                {/* Imagen de Banner */}
-                {store.banner_url ? (
-                    <div className="relative w-full h-48 md:h-64">
-                        <Image
-                            src={store.banner_url}
-                            alt={`Banner de ${store.name}`}
-                            fill
-                            className="object-cover"
-                            priority
-                        />
-                        {/* Overlay oscuro para legibilidad */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                     </div>
-                ) : (
-                    <div className="w-full h-48 md:h-64 bg-gradient-to-br from-gray-900 to-gray-700" />
-                )}
-
-                {/* Contenido sobre el banner */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
-                    {/* Logo grande */}
-                    <Avatar className="h-20 w-20 mb-4 border-4 border-white shadow-lg">
-                        {store.logo_url ? (
-                            <AvatarImage src={store.logo_url} alt={store.name} />
-                        ) : null}
-                        <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                            {store.logo_url ? null : <Store className="h-8 w-8" />}
-                            {!store.logo_url && getInitials(store.name)}
-                        </AvatarFallback>
-                    </Avatar>
-
-                    <p className="text-sm opacity-80 mb-1">Bienvenido a</p>
-                    <h2 className="text-3xl font-bold mb-2">{store.name}</h2>
-
-                    {/* Descripción si existe */}
-                    {store.description && (
-                        <p className="text-sm opacity-90 max-w-md mb-4">{store.description}</p>
-                    )}
-
-                    <Button size="sm" variant="secondary" className="gap-2" asChild>
-                        <a href={`https://wa.me/${formatPhoneForWhatsApp(store.phone)}`} target="_blank">
-                            <MessageCircle className="h-4 w-4" /> Dudas al WhatsApp
-                        </a>
-                    </Button>
                 </div>
             </div>
 
-            {/* CATÁLOGO CON FILTRADO POR CATEGORÍAS */}
-            <div className="container mx-auto px-4 py-8">
-                <h3 className="font-bold text-lg mb-4">Catálogo</h3>
-
+            {/* 4. CATÁLOGO */}
+            <div className="container mx-auto px-6 md:px-12 lg:px-20 pb-20 max-w-7xl mx-auto">
                 {!products || products.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500">
-                        <p>Esta tienda aún no tiene productos.</p>
+                    <div className="text-center py-16 bg-white rounded-xl border border-dashed">
+                        <Store className="h-8 w-8 mx-auto text-green-600 mb-2" />
+                        <p className="text-slate-500 text-sm">Sin productos aún.</p>
                     </div>
                 ) : (
-                    <StoreProducts
-                        products={products}
-                        categories={categories}
-                        productImages={productImages}
-                        productVariants={productVariants}
-                    />
+                    <StoreProducts products={products} categories={categories} productImages={productImages} productVariants={productVariants} />
                 )}
             </div>
         </div>
