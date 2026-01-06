@@ -78,7 +78,7 @@ export default function LandingPage() {
                   {/* Image Wrapper */}
                   <div className="relative">
                     <Image
-                      src="/images/hero.png"
+                      src="/images/imagenespresenteacion.png"
                       alt="Goveny Dashboard Preview"
                       width={500}
                       height={500}

@@ -26,51 +26,76 @@ interface OrderData {
 }
 
 export async function createOrder(orderData: OrderData, cartItems: CartItem[]) {
-    // 1. Insertar el pedido principal
-    const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-            store_id: orderData.storeId,
-            total: orderData.total,
-            status: 'pending',
-            customer_name: orderData.customerName,
-            customer_phone: orderData.customerPhone || null,
-            customer_address: orderData.customerAddress || null,
-        })
-        .select('id')
-        .single()
-
-    if (orderError || !order) {
-        console.error('Error creando pedido:', orderError)
-        throw new Error('Error al crear el pedido')
-    }
-
-    // 2. Insertar los items del pedido
-    const orderItems = cartItems.map(item => ({
-        order_id: order.id,
-        product_id: item.productId,
-        product_title: item.productTitle,
+    // Preparar items para el JSONB
+    const itemsJson = cartItems.map(item => ({
+        product_id: item.id, // Corregido: antes era item.productId
+        product_title: item.title, // Corregido: antes era item.productTitle
         quantity: item.quantity,
         price: item.price,
-        variant_info: item.variantInfo || null,
+        variant_info: item.selectedVariant || null, // Corregido: antes era item.variantInfo
     }))
 
-    const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems)
+    // Llamar a la función RPC segura
+    const { data: orderId, error } = await supabase
+        .rpc('create_new_order', {
+            p_store_id: orderData.storeId,
+            p_total: orderData.total,
+            p_customer_name: orderData.customerName,
+            p_customer_phone: orderData.customerPhone || null,
+            p_customer_address: orderData.customerAddress || null,
+            p_items: itemsJson
+        })
 
-    if (itemsError) {
-        console.error('Error insertando items:', itemsError)
-        // Intentar borrar el pedido si fallan los items
-        await supabase.from('orders').delete().eq('id', order.id)
-        throw new Error('Error al guardar los productos del pedido')
+    if (error) {
+        console.error('Error creando pedido via RPC:', error)
+        throw new Error(`Error Supabase: ${error.message} (${error.code})`)
     }
 
-    return { orderId: order.id }
+    if (!orderId) {
+        throw new Error('No se recibió confirmación del pedido')
+    }
+
+    return { orderId }
 }
+
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+// ... (resto de imports)
+
+// Helper para obtener cliente autenticado
+async function getAuthenticatedSupabase() {
+    const cookieStore = await cookies()
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll()
+                },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            cookieStore.set(name, value, options)
+                        )
+                    } catch {
+                        // Ignorar errores en Server Components
+                    }
+                },
+            },
+        }
+    )
+}
+
+// ... (createOrder se queda igual porque usa RPC o cliente anónimo si así se desea, 
+// PERO createOrder usa RPC security definer, así que el cliente anónimo está bien ahí)
 
 // Función para obtener pedidos de una tienda (para el dashboard)
 export async function getStoreOrders(storeId: string) {
+    // Usamos cliente autenticado para respetar RLS
+    const supabase = await getAuthenticatedSupabase()
+    
     const { data: orders, error } = await supabase
         .from('orders')
         .select(`
@@ -90,6 +115,9 @@ export async function getStoreOrders(storeId: string) {
 
 // Función para actualizar el estado de un pedido
 export async function updateOrderStatus(orderId: string, status: string) {
+    // IMPORTANTE: Usar cliente autenticado
+    const supabase = await getAuthenticatedSupabase()
+
     const { error } = await supabase
         .from('orders')
         .update({ status })
@@ -97,7 +125,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
     if (error) {
         console.error('Error actualizando estado:', error)
-        throw new Error('Error al actualizar el estado del pedido')
+        throw new Error(`Error Supabase: ${error.message}`)
     }
 
     revalidatePath('/dashboard/orders')

@@ -17,7 +17,7 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { updateOrderStatus } from '@/actions/orders'
+import OrderActions from '@/components/dashboard/OrderActions'
 
 async function getSupabaseClient() {
     const cookieStore = await cookies()
@@ -224,34 +224,19 @@ export default async function OrdersPage() {
                                         </Table>
 
                                         {/* Acciones */}
-                                        <div className="flex gap-2 mt-4 pt-4 border-t">
-                                            {order.status === 'pending' && (
-                                                <>
-                                                    <form action={async () => {
-                                                        'use server'
-                                                        await updateOrderStatus(order.id, 'completed')
-                                                    }}>
-                                                        <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700">
-                                                            Marcar como Completado
-                                                        </Button>
-                                                    </form>
-                                                    <form action={async () => {
-                                                        'use server'
-                                                        await updateOrderStatus(order.id, 'cancelled')
-                                                    }}>
-                                                        <Button type="submit" size="sm" variant="destructive">
-                                                            Cancelar Pedido
-                                                        </Button>
-                                                    </form>
-                                                </>
-                                            )}
-                                            {order.status === 'completed' && (
+                                        <OrderActions orderId={order.id} currentStatus={order.status} />
+
+                                        {/* Estado estático si no es pending */}
+                                        {order.status === 'completed' && (
+                                            <div className="mt-4 pt-4 border-t">
                                                 <span className="text-sm text-green-600 font-medium">✓ Pedido completado</span>
-                                            )}
-                                            {order.status === 'cancelled' && (
+                                            </div>
+                                        )}
+                                        {order.status === 'cancelled' && (
+                                            <div className="mt-4 pt-4 border-t">
                                                 <span className="text-sm text-red-600 font-medium">✕ Pedido cancelado</span>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </CollapsibleContent>
                             </div>

@@ -9,12 +9,14 @@ import { cn } from '@/lib/utils'
 import CartSidebar from './CartSidebar'
 
 interface StoreNavbarProps {
+    storeId: string
     storeName: string
     storePhone: string
     categories: { id: string; name: string }[]
 }
 
 export default function StoreNavbar({ 
+    storeId,
     storeName, 
     storePhone,
 }: StoreNavbarProps) {
@@ -85,11 +87,11 @@ export default function StoreNavbar({
                         )}
                     </div>
 
-                    {/* Carrito (Verde con icono de carrito) */}
-                    <CartSidebar storePhone={storePhone}>
+                    {/* Carrito (Negro con icono de carrito) */}
+                    <CartSidebar storeId={storeId} storePhone={storePhone}>
                         <Button 
                             size="icon" 
-                            className="rounded-full relative shadow-lg shadow-green-600/20 bg-green-600 text-white hover:bg-green-700 h-10 w-10 transition-all border-2 border-white"
+                            className="rounded-full relative shadow-lg shadow-black/10 bg-black text-white hover:bg-gray-800 h-10 w-10 transition-all border-2 border-white"
                         >
                             <ShoppingCart className="h-5 w-5" />
                             {/* Dot indicador rojo */}

@@ -9,11 +9,12 @@ import { Separator } from '@/components/ui/separator'
 import CheckoutDialog from './CheckoutDialog'
 
 interface CartSidebarProps {
+    storeId: string
     storePhone: string
     children: React.ReactNode // El botón trigger (icono de bolsa)
 }
 
-export default function CartSidebar({ storePhone, children }: CartSidebarProps) {
+export default function CartSidebar({ storeId, storePhone, children }: CartSidebarProps) {
     const cart = useCart()
 
     // Calculamos el total
@@ -82,6 +83,7 @@ export default function CartSidebar({ storePhone, children }: CartSidebarProps) 
                             <span>Q{total.toFixed(2)}</span>
                         </div>
                         <CheckoutDialog
+                            storeId={storeId}
                             storePhone={storePhone}
                             total={total}
                         >

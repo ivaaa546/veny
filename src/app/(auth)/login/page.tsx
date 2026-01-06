@@ -134,7 +134,7 @@ export default function AuthPage() {
                                     <div className="flex items-center justify-between">
                                         <Label htmlFor="login-password">Contraseña</Label>
                                         <Link 
-                                            href="/recover" 
+                                            href="/forgot-password" 
                                             className="text-xs text-primary hover:underline"
                                         >
                                             ¿Olvidaste tu contraseña?

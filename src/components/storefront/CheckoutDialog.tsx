@@ -18,13 +18,16 @@ import { useCart, CartItem } from '@/hooks/use-cart'
 import { formatPhoneForWhatsApp } from '@/lib/phone'
 import { Loader2, MessageCircle } from 'lucide-react'
 
+import { createOrder } from '@/actions/orders'
+
 interface CheckoutDialogProps {
+    storeId: string
     storePhone: string
     total: number
     children: React.ReactNode
 }
 
-export default function CheckoutDialog({ storePhone, total, children }: CheckoutDialogProps) {
+export default function CheckoutDialog({ storeId, storePhone, total, children }: CheckoutDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const cart = useCart()
@@ -66,25 +69,35 @@ export default function CheckoutDialog({ storePhone, total, children }: Checkout
         setLoading(true)
 
         try {
-            // Generar URL de WhatsApp
+            // 1. Guardar pedido en base de datos
+            await createOrder({
+                storeId,
+                customerName,
+                customerPhone,
+                customerAddress,
+                total
+            }, cart.items)
+
+            // 2. Generar URL de WhatsApp
             const message = generateWhatsAppMessage(cart.items)
             const formattedPhone = formatPhoneForWhatsApp(storePhone)
             const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`
 
-            // Cerrar dialog
-            setOpen(false)
+            // 3. Limpiar carrito
+            cart.clearCart()
 
-            // Resetear formulario
+            // 4. Cerrar dialog y resetear form
+            setOpen(false)
             setCustomerName('')
             setCustomerPhone('')
             setCustomerAddress('')
 
-            // Abrir WhatsApp
+            // 5. Abrir WhatsApp
             window.open(whatsappUrl, '_blank')
 
         } catch (error) {
             console.error('Error:', error)
-            alert('Error al procesar el pedido')
+            alert('Hubo un problema al procesar el pedido. Por favor intenta de nuevo.')
         } finally {
             setLoading(false)
         }

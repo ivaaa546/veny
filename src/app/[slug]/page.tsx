@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import StoreProducts from '@/components/storefront/StoreProducts'
 import StoreNavbar from '@/components/storefront/StoreNavbar'
-import { MessageCircle, Store, MapPin } from 'lucide-react'
+import { Phone, Store, MapPin, Smartphone, Instagram, Facebook, Video } from 'lucide-react'
 
 // --- DATA FETCHING ---
 async function getStoreData(slug: string) {
@@ -57,6 +57,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             
             {/* 1. NAVBAR */}
             <StoreNavbar 
+                storeId={store.id}
                 storeName={store.name}
                 storePhone={store.phone}
                 categories={categories}
@@ -88,12 +89,40 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                             <p className="text-slate-500 text-xs md:text-sm mt-1 max-w-lg leading-relaxed">{store.description}</p>
                         )}
                     </div>
-                    <div className="w-full md:w-auto">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white rounded-full w-full md:w-auto px-6 h-9 text-xs font-semibold shadow-sm" asChild>
-                            <a href={`https://wa.me/${formatPhoneForWhatsApp(store.phone)}`} target="_blank">
-                                <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
-                            </a>
-                        </Button>
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center md:justify-end">
+                        <div className="flex items-center gap-2">
+                            {store.instagram_url && (
+                                <Button size="icon" variant="outline" className="rounded-full h-9 w-9 border-slate-200 hover:text-pink-600 shadow-sm" asChild>
+                                    <a href={store.instagram_url} target="_blank" rel="noopener noreferrer">
+                                        <Instagram className="h-4 w-4" />
+                                    </a>
+                                </Button>
+                            )}
+                            {store.facebook_url && (
+                                <Button size="icon" variant="outline" className="rounded-full h-9 w-9 border-slate-200 hover:text-blue-600 shadow-sm" asChild>
+                                    <a href={store.facebook_url} target="_blank" rel="noopener noreferrer">
+                                        <Facebook className="h-4 w-4" />
+                                    </a>
+                                </Button>
+                            )}
+                            {/* TikTok con Logo SVG Personalizado */}
+                            {store.tiktok_url && (
+                                <Button size="icon" variant="outline" className="rounded-full h-9 w-9 border-slate-200 hover:text-black hover:border-black shadow-sm" asChild>
+                                    <a href={store.tiktok_url} target="_blank" rel="noopener noreferrer">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                                            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 1 0-1 13.6 6.84 6.84 0 0 0 6.25-6.62V9.42c.05.02.12.03.18.03a4.86 4.86 0 0 0 4.84-4.55l.04-.36h-1.08z" />
+                                        </svg>
+                                    </a>
+                                </Button>
+                            )}
+                            
+                            {/* Botón de WhatsApp - Estilo Outline igual a los demás */}
+                            <Button size="icon" variant="outline" className="rounded-full h-9 w-9 border-slate-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 shadow-sm shrink-0" asChild>
+                                <a href={`https://wa.me/${formatPhoneForWhatsApp(store.phone)}`} target="_blank" rel="noopener noreferrer">
+                                    <Phone className="h-4 w-4" />
+                                </a>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -73,17 +73,17 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard
                     title="Ingresos Totales"
-                    value="Q 0.00"
+                    value={`Q ${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     icon={CreditCard}
-                    trend="+0% mes pasado"
+                    trend="Histórico"
                     color="text-emerald-600"
                     bg="bg-emerald-100 dark:bg-emerald-900/20"
                 />
                 <KpiCard
-                    title="Pedidos Activos"
-                    value="0"
+                    title="Pedidos Pendientes"
+                    value={stats.pendingOrders.toString()}
                     icon={ShoppingBag}
-                    trend="0 pendientes"
+                    trend="Por despachar"
                     color="text-blue-600"
                     bg="bg-blue-100 dark:bg-blue-900/20"
                 />
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
                             
                             {/* Left Column: Chart & Quick Actions (Span 5) */}
                             <div className="lg:col-span-5 space-y-6">
-                                {/* Fake Chart / Overview */}
+                                {/* Sales Chart */}
                                 <Card className="shadow-sm">
                                     <CardHeader>
                                         <CardTitle>Rendimiento de Ventas</CardTitle>
@@ -118,14 +118,28 @@ export default async function DashboardPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="h-[200px] flex items-end justify-between gap-2 mt-4">
-                                            {[35, 20, 45, 30, 60, 45, 75].map((h, i) => (
-                                                <div key={i} className="w-full bg-primary/10 rounded-t-md relative group overflow-hidden" style={{ height: `${h}%` }}>
-                                                    <div className="absolute bottom-0 left-0 right-0 bg-primary/80 h-0 transition-all duration-500 group-hover:h-full opacity-80"></div>
-                                                </div>
-                                            ))}
+                                            {(() => {
+                                                const maxVal = Math.max(...stats.salesChart.map(d => d.amount), 1); // Evitar división por cero
+                                                return stats.salesChart.map((data, i) => (
+                                                    <div key={i} className="w-full flex flex-col justify-end group relative h-full">
+                                                        {/* Tooltip con valor exacto */}
+                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            Q {data.amount}
+                                                        </div>
+                                                        <div 
+                                                            className="w-full bg-primary/10 rounded-t-md relative overflow-hidden transition-all duration-500 hover:bg-primary/20" 
+                                                            style={{ height: `${(data.amount / maxVal) * 100}%` }}
+                                                        >
+                                                            <div className="absolute bottom-0 left-0 right-0 bg-primary/80 h-0 transition-all duration-500 group-hover:h-full opacity-80"></div>
+                                                        </div>
+                                                    </div>
+                                                ));
+                                            })()}
                                         </div>
                                         <div className="flex justify-between text-xs text-muted-foreground mt-2 px-1">
-                                            <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                                            {stats.salesChart.map((d, i) => (
+                                                <span key={i}>{d.label}</span>
+                                            ))}
                                         </div>
                                     </CardContent>
                                 </Card>

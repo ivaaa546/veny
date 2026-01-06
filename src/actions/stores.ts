@@ -166,6 +166,9 @@ export async function updateStoreSettings(formData: FormData) {
     const phone = formData.get('phone') as string
     const logoUrlJson = formData.get('logo_url') as string
     const bannerUrlJson = formData.get('banner_url') as string
+    const instagram_url = formData.get('instagram_url') as string
+    const facebook_url = formData.get('facebook_url') as string
+    const tiktok_url = formData.get('tiktok_url') as string
 
     if (!storeId || !name) {
         throw new Error('Faltan datos obligatorios')
@@ -176,7 +179,7 @@ export async function updateStoreSettings(formData: FormData) {
         const slugRegex = /^[a-z0-9-]+$/
         if (!slugRegex.test(slug)) {
             throw new Error('El link solo puede tener letras minúsculas, números y guiones')
-        }
+        } 
 
         // Verificar si el slug ya está usado por otra tienda
         const { data: existingStore } = await supabase
@@ -264,6 +267,9 @@ export async function updateStoreSettings(formData: FormData) {
         slug: slug || null,
         description: description || null,
         phone: phone || null,
+        instagram_url: instagram_url || null,
+        facebook_url: facebook_url || null,
+        tiktok_url: tiktok_url || null,
     }
 
     // Solo actualizar logo si viene uno nuevo

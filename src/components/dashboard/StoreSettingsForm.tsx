@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { updateStoreSettings } from '@/actions/stores'
 import { supabase } from '@/lib/supabase'
-import { Loader2, Upload, Store, Check, ImageIcon } from 'lucide-react'
+import { Loader2, Upload, Store, Check, ImageIcon, Instagram, Facebook, Video } from 'lucide-react'
 
 interface StoreData {
     id: string
@@ -20,6 +20,9 @@ interface StoreData {
     logo_url?: string | null
     banner_url?: string | null
     slug: string
+    instagram_url?: string | null
+    facebook_url?: string | null
+    tiktok_url?: string | null
 }
 
 interface StoreSettingsFormProps {
@@ -36,6 +39,9 @@ export default function StoreSettingsForm({ store, userId }: StoreSettingsFormPr
     const [slug, setSlug] = useState(store.slug || '')
     const [description, setDescription] = useState(store.description || '')
     const [phone, setPhone] = useState(store.phone || '')
+    const [instagram, setInstagram] = useState(store.instagram_url || '')
+    const [facebook, setFacebook] = useState(store.facebook_url || '')
+    const [tiktok, setTiktok] = useState(store.tiktok_url || '')
 
     // Estados para el logo
     const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -73,6 +79,9 @@ export default function StoreSettingsForm({ store, userId }: StoreSettingsFormPr
             formData.set('slug', slug)
             formData.set('description', description)
             formData.set('phone', phone)
+            formData.set('instagram_url', instagram)
+            formData.set('facebook_url', facebook)
+            formData.set('tiktok_url', tiktok)
 
             // Subir logo si hay uno nuevo
             if (logoFile) {
@@ -279,6 +288,50 @@ export default function StoreSettingsForm({ store, userId }: StoreSettingsFormPr
                         <p className="text-xs text-muted-foreground">
                             Solo letras minúsculas, números y guiones
                         </p>
+                    </div>
+
+                    {/* Redes Sociales */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Redes Sociales</h3>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="instagram" className="flex items-center gap-2">
+                                <Instagram className="h-4 w-4 text-pink-600" />
+                                Instagram (URL completa)
+                            </Label>
+                            <Input
+                                id="instagram"
+                                placeholder="https://instagram.com/tu-tienda"
+                                value={instagram}
+                                onChange={(e) => setInstagram(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="facebook" className="flex items-center gap-2">
+                                <Facebook className="h-4 w-4 text-blue-600" />
+                                Facebook (URL completa)
+                            </Label>
+                            <Input
+                                id="facebook"
+                                placeholder="https://facebook.com/tu-tienda"
+                                value={facebook}
+                                onChange={(e) => setFacebook(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="tiktok" className="flex items-center gap-2">
+                                <Video className="h-4 w-4 text-black" />
+                                TikTok (URL completa)
+                            </Label>
+                            <Input
+                                id="tiktok"
+                                placeholder="https://tiktok.com/@tu-tienda"
+                                value={tiktok}
+                                onChange={(e) => setTiktok(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     {/* Mensaje de éxito */}

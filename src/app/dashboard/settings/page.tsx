@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import StoreSettingsForm from '@/components/dashboard/StoreSettingsForm'
+import PasswordChangeForm from '@/components/dashboard/PasswordChangeForm'
 import DangerZone from '@/components/dashboard/DangerZone'
 
 async function getSupabaseClient() {
@@ -58,8 +59,13 @@ export default async function SettingsPage() {
                 </p>
             </div>
 
-            {/* Formulario */}
+            {/* Formulario de Tienda */}
             <StoreSettingsForm store={store} userId={session.user.id} />
+
+            {/* Cambio de Contraseña */}
+            <div className="max-w-2xl mx-auto">
+                <PasswordChangeForm />
+            </div>
 
             {/* Zona de Peligro */}
             <div className="max-w-2xl mx-auto">
