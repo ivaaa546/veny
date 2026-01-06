@@ -25,6 +25,7 @@ export default function AuthPage() {
     const [registerEmail, setRegisterEmail] = useState('')
     const [registerPassword, setRegisterPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+    const [accessCode, setAccessCode] = useState('') // Nuevo estado para el código
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,6 +33,7 @@ export default function AuthPage() {
     )
 
     const handleLogin = async (e: React.FormEvent) => {
+        // ... (Login logic remains same)
         e.preventDefault()
         setLoading(true)
 
@@ -55,11 +57,17 @@ export default function AuthPage() {
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault()
         
+        // Validar que se haya ingresado algo
+        if (!accessCode.trim()) {
+            toast.error('Por favor ingresa un código de invitación')
+            return
+        }
+
         if (registerPassword !== confirmPassword) {
             toast.error('Las contraseñas no coinciden')
             return
         }
-
+        
         if (registerPassword.length < 6) {
             toast.error('La contraseña debe tener al menos 6 caracteres')
             return
@@ -73,6 +81,9 @@ export default function AuthPage() {
                 password: registerPassword,
                 options: {
                     emailRedirectTo: `${location.origin}/auth/callback`,
+                    data: {
+                        invitation_code: accessCode.trim() // Enviamos el código a la BD
+                    }
                 },
             })
             if (error) throw error
@@ -81,6 +92,7 @@ export default function AuthPage() {
                 description: 'Por favor verifica tu correo electrónico para continuar.'
             })
         } catch (error: any) {
+            // El error vendrá directo de la base de datos (Trigger)
             toast.error(error.message || 'Error al crear cuenta')
         } finally {
             setLoading(false)
@@ -89,7 +101,7 @@ export default function AuthPage() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 p-4 relative">
-            {/* Background Decor */}
+            {/* ... (Background & Header remain same) */}
             <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]"></div>
             
             <div className="absolute top-8 left-8">
@@ -225,6 +237,23 @@ export default function AuthPage() {
                                         className="bg-background/50"
                                         placeholder="Repite tu contraseña"
                                     />
+                                </div>
+
+                                {/* Access Code Field */}
+                                <div className="space-y-2 border-t pt-4">
+                                    <Label htmlFor="access-code" className="text-primary font-semibold">Código de Invitación (Beta)</Label>
+                                    <Input
+                                        id="access-code"
+                                        type="text"
+                                        required
+                                        placeholder="Ingresa tu código de acceso"
+                                        value={accessCode}
+                                        onChange={(e) => setAccessCode(e.target.value)}
+                                        className="bg-primary/5 border-primary/20"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">
+                                        Veny está en fase Beta privada. Necesitas un código para registrarte.
+                                    </p>
                                 </div>
                             </CardContent>
                             <CardFooter className="pt-4">
