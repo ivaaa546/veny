@@ -3,10 +3,17 @@ import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/use-cart'
 import { toast } from 'sonner'
 
-export default function AddToCartButton({ product }: { product: any }) {
+interface AddToCartButtonProps {
+    product: any
+    disabled?: boolean
+}
+
+export default function AddToCartButton({ product, disabled = false }: AddToCartButtonProps) {
     const cart = useCart()
 
     const handleAddToCart = () => {
+        if (disabled) return
+        
         // Limpiar el objeto del producto para solo incluir los campos necesarios
         const cleanProduct = {
             id: product.id,
@@ -25,11 +32,12 @@ export default function AddToCartButton({ product }: { product: any }) {
 
     return (
         <Button
-            className="w-full h-8 text-xs"
+            className={`w-full h-8 text-xs ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             variant="outline"
             onClick={handleAddToCart}
+            disabled={disabled}
         >
-            Agregar +
+            {disabled ? 'Agotado' : 'Agregar +'}
         </Button>
     )
 }

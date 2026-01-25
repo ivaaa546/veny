@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface CartItem {
-    id: string
+    id: string              // ID del producto original
+    cartItemId: string      // ID único: productId-variantHash para diferenciar variantes
     title: string
     price: number
     image_url: string | null
@@ -10,13 +11,16 @@ export interface CartItem {
     selectedVariant?: string
 }
 
-// Tipo para agregar items (sin quantity, se agrega automáticamente)
-export type CartItemInput = Omit<CartItem, 'quantity'>
+// Tipo para agregar items (sin quantity ni cartItemId, se agregan automáticamente)
+export type CartItemInput = Omit<CartItem, 'quantity' | 'cartItemId'>
 
 interface CartStore {
     items: CartItem[]
     addItem: (data: CartItemInput) => void
-    removeItem: (id: string) => void
+    removeItem: (cartItemId: string) => void
+    updateQuantity: (cartItemId: string, quantity: number) => void
+    increaseQuantity: (cartItemId: string) => void
+    decreaseQuantity: (cartItemId: string) => void
     clearCart: () => void
     total: number // Calculado dinámicamente
 }
@@ -41,25 +45,69 @@ export const useCart = create(
                         : undefined
                 }
 
-                const existingItem = currentItems.find((item) => item.id === cleanData.id)
+                // Crear ID único que incluye la variante para diferenciar items
+                const cartItemId = cleanData.selectedVariant
+                    ? `${cleanData.id}-${cleanData.selectedVariant.replace(/\s/g, '_')}`
+                    : cleanData.id
+
+                const existingItem = currentItems.find((item) => item.cartItemId === cartItemId)
 
                 if (existingItem) {
                     // Si ya existe, aumentamos cantidad
                     set({
                         items: currentItems.map((item) =>
-                            item.id === cleanData.id
+                            item.cartItemId === cartItemId
                                 ? { ...item, quantity: item.quantity + 1 }
                                 : item
                         ),
                     })
                 } else {
                     // Si es nuevo, lo agregamos con quantity: 1
-                    set({ items: [...currentItems, { ...cleanData, quantity: 1 }] })
+                    set({ items: [...currentItems, { ...cleanData, cartItemId, quantity: 1 }] })
                 }
             },
 
-            removeItem: (id: string) => {
-                set({ items: [...get().items.filter((item) => item.id !== id)] })
+            removeItem: (cartItemId: string) => {
+                set({ items: [...get().items.filter((item) => item.cartItemId !== cartItemId)] })
+            },
+
+            updateQuantity: (cartItemId: string, quantity: number) => {
+                if (quantity <= 0) {
+                    get().removeItem(cartItemId)
+                    return
+                }
+                set({
+                    items: get().items.map((item) =>
+                        item.cartItemId === cartItemId
+                            ? { ...item, quantity }
+                            : item
+                    ),
+                })
+            },
+
+            increaseQuantity: (cartItemId: string) => {
+                set({
+                    items: get().items.map((item) =>
+                        item.cartItemId === cartItemId
+                            ? { ...item, quantity: item.quantity + 1 }
+                            : item
+                    ),
+                })
+            },
+
+            decreaseQuantity: (cartItemId: string) => {
+                const item = get().items.find((i) => i.cartItemId === cartItemId)
+                if (item && item.quantity <= 1) {
+                    get().removeItem(cartItemId)
+                } else {
+                    set({
+                        items: get().items.map((i) =>
+                            i.cartItemId === cartItemId
+                                ? { ...i, quantity: i.quantity - 1 }
+                                : i
+                        ),
+                    })
+                }
             },
 
             clearCart: () => set({ items: [] }),
@@ -70,10 +118,14 @@ export const useCart = create(
             // Migración para limpiar datos antiguos
             onRehydrateStorage: () => (state) => {
                 if (state?.items) {
-                    // Limpiar items con selectedVariant como objeto
+                    // Limpiar items con selectedVariant como objeto y migrar a nuevo formato
                     state.items = state.items
                         .map((item: any) => ({
                             ...item,
+                            // Migrar items antiguos sin cartItemId
+                            cartItemId: item.cartItemId || (item.selectedVariant
+                                ? `${item.id}-${item.selectedVariant.replace(/\s/g, '_')}`
+                                : item.id),
                             selectedVariant: typeof item.selectedVariant === 'string'
                                 ? item.selectedVariant
                                 : undefined

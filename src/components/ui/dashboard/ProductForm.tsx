@@ -16,6 +16,7 @@ interface Variant {
     type: string
     value: string
     priceAdjustment: number
+    stock: number
 }
 
 interface ExistingImage {
@@ -85,7 +86,7 @@ export default function ProductForm({ userId, categories, initialData }: Product
 
     // Agregar nueva variante
     const addVariant = () => {
-        setVariants(prev => [...prev, { type: '', value: '', priceAdjustment: 0 }])
+        setVariants(prev => [...prev, { type: '', value: '', priceAdjustment: 0, stock: 0 }])
     }
 
     // Eliminar variante
@@ -320,14 +321,24 @@ export default function ProductForm({ userId, categories, initialData }: Product
                                         onChange={(e) => updateVariant(index, 'value', e.target.value)}
                                     />
                                 </div>
-                                <div className="w-32">
-                                    <Label className="text-xs">Ajuste Precio</Label>
+                                <div className="w-24">
+                                    <Label className="text-xs">Ajuste Q</Label>
                                     <Input
                                         type="number"
                                         step="0.01"
                                         placeholder="0.00"
                                         value={variant.priceAdjustment}
                                         onChange={(e) => updateVariant(index, 'priceAdjustment', parseFloat(e.target.value) || 0)}
+                                    />
+                                </div>
+                                <div className="w-20">
+                                    <Label className="text-xs">Stock</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        placeholder="0"
+                                        value={variant.stock}
+                                        onChange={(e) => updateVariant(index, 'stock', parseInt(e.target.value) || 0)}
                                     />
                                 </div>
                                 <Button

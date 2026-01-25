@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import CartSidebar from './CartSidebar'
+import { useCart } from '@/hooks/use-cart'
 
 interface StoreNavbarProps {
     storeId: string
@@ -24,6 +25,8 @@ export default function StoreNavbar({
     const searchParams = useSearchParams()
     const [isSearchOpen, setIsSearchOpen] = useState(false)
     const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
+    const cart = useCart()
+    const itemCount = cart.items.reduce((acc, item) => acc + item.quantity, 0)
 
     // Manejar búsqueda
     const handleSearch = (term: string) => {
@@ -94,8 +97,12 @@ export default function StoreNavbar({
                             className="rounded-full relative shadow-lg shadow-black/10 bg-black text-white hover:bg-gray-800 h-10 w-10 transition-all border-2 border-white"
                         >
                             <ShoppingCart className="h-5 w-5" />
-                            {/* Dot indicador rojo */}
-                            <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 border-2 border-white rounded-full" />
+                            {/* Indicador con contador - solo si hay items */}
+                            {itemCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                                    {itemCount > 99 ? '99+' : itemCount}
+                                </span>
+                            )}
                         </Button>
                     </CartSidebar>
                 </div>

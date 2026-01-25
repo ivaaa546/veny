@@ -81,10 +81,11 @@ export default async function EditProductPage({ params }: PageProps) {
         price: product.price,
         description: product.description || '',
         category_id: product.category_id || '',
-        variants: (product.product_variants || []).map((v: { variant_type: string; variant_value: string; price_adjustment: number }) => ({
+        variants: (product.product_variants || []).map((v: { variant_type: string; variant_value: string; price_adjustment: number; stock: number }) => ({
             type: v.variant_type,
             value: v.variant_value,
-            priceAdjustment: v.price_adjustment || 0
+            priceAdjustment: v.price_adjustment || 0,
+            stock: v.stock || 0
         })),
         images: (product.product_images || [])
             .sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order)

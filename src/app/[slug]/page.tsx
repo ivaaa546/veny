@@ -135,7 +135,15 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                         <p className="text-slate-500 text-sm">Sin productos aún.</p>
                     </div>
                 ) : (
-                    <StoreProducts products={products} categories={categories} productImages={productImages} productVariants={productVariants} />
+                    <StoreProducts 
+                        products={products} 
+                        categories={categories} 
+                        productImages={productImages} 
+                        productVariants={productVariants}
+                        storeId={store.id}
+                        storePhone={store.phone}
+                        storeSlug={store.slug}
+                    />
                 )}
             </div>
         </div>

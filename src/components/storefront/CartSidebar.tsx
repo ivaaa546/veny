@@ -1,6 +1,6 @@
 'use client'
 
-import { ShoppingBag, Trash2 } from 'lucide-react'
+import { ShoppingBag, Trash2, Minus, Plus } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -41,7 +41,7 @@ export default function CartSidebar({ storeId, storePhone, children }: CartSideb
                         <ScrollArea className="h-[60vh]">
                             <div className="space-y-4 pr-4">
                                 {cart.items.map((item) => (
-                                    <div key={item.id} className="flex gap-4 items-start">
+                                    <div key={item.cartItemId} className="flex gap-3 items-start">
                                         {/* Imagen Miniatura */}
                                         <div className="h-16 w-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
                                             {item.image_url && (
@@ -49,21 +49,42 @@ export default function CartSidebar({ storeId, storePhone, children }: CartSideb
                                             )}
                                         </div>
                                         {/* Info */}
-                                        <div className="flex-1">
+                                        <div className="flex-1 min-w-0">
                                             <h4 className="font-medium text-sm line-clamp-2">{item.title}</h4>
                                             {item.selectedVariant && (
                                                 <p className="text-xs text-muted-foreground">{item.selectedVariant}</p>
                                             )}
-                                            <p className="text-sm text-gray-500">
-                                                {item.quantity} x Q{item.price}
+                                            <p className="text-sm font-semibold text-green-700 mt-1">
+                                                Q{(item.price * item.quantity).toFixed(2)}
                                             </p>
+                                            
+                                            {/* Controles de cantidad */}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={() => cart.decreaseQuantity(item.cartItemId)}
+                                                >
+                                                    <Minus className="h-3 w-3" />
+                                                </Button>
+                                                <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={() => cart.increaseQuantity(item.cartItemId)}
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </Button>
+                                            </div>
                                         </div>
                                         {/* Borrar */}
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-red-500"
-                                            onClick={() => cart.removeItem(item.id)}
+                                            className="h-8 w-8 text-red-500 flex-shrink-0"
+                                            onClick={() => cart.removeItem(item.cartItemId)}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

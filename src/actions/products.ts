@@ -53,7 +53,7 @@ export async function createProduct(formData: FormData) {
     const variantsJson = formData.get('variants') as string
 
     const images: string[] = imagesJson ? JSON.parse(imagesJson) : []
-    const variants: Array<{ type: string; value: string; priceAdjustment: number }> =
+    const variants: Array<{ type: string; value: string; priceAdjustment: number; stock: number }> =
         variantsJson ? JSON.parse(variantsJson) : []
 
     // 3. Validaciones básicas
@@ -124,7 +124,8 @@ export async function createProduct(formData: FormData) {
                     product_id: productId,
                     variant_type: v.type,
                     variant_value: v.value,
-                    price_adjustment: v.priceAdjustment || 0
+                    price_adjustment: v.priceAdjustment || 0,
+                    stock: v.stock || 0
                 }))
 
                 const { error: variantsError } = await supabase
@@ -232,7 +233,7 @@ export async function updateProduct(formData: FormData) {
     const variantsJson = formData.get('variants') as string
 
     const newImages: string[] = imagesJson ? JSON.parse(imagesJson) : []
-    const variants: Array<{ type: string; value: string; priceAdjustment: number }> =
+    const variants: Array<{ type: string; value: string; priceAdjustment: number; stock: number }> =
         variantsJson ? JSON.parse(variantsJson) : []
 
     // 3. Validaciones básicas
@@ -276,7 +277,8 @@ export async function updateProduct(formData: FormData) {
                 product_id: productId,
                 variant_type: v.type,
                 variant_value: v.value,
-                price_adjustment: v.priceAdjustment || 0
+                price_adjustment: v.priceAdjustment || 0,
+                stock: v.stock || 0
             }))
 
             const { error: variantsError } = await supabase

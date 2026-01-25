@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -12,13 +12,19 @@ interface StoreProductsProps {
     categories: any[]
     productImages?: any[]
     productVariants?: any[]
+    storeId: string
+    storePhone: string
+    storeSlug: string
 }
 
 export default function StoreProducts({
     products,
     categories,
     productImages = [],
-    productVariants = []
+    productVariants = [],
+    storeId,
+    storePhone,
+    storeSlug
 }: StoreProductsProps) {
     const searchParams = useSearchParams()
     const searchTerm = searchParams.get('search')?.toLowerCase() || ''
@@ -26,9 +32,42 @@ export default function StoreProducts({
     const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
     const [modalOpen, setModalOpen] = useState(false)
 
+    // Detectar hash en la URL para abrir modal automáticamente
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash
+            if (hash && hash.startsWith('#producto-')) {
+                const productId = hash.replace('#producto-', '')
+                const product = products.find(p => p.id === productId)
+                if (product) {
+                    setSelectedProduct(product)
+                    setModalOpen(true)
+                }
+            }
+        }
+
+        // Ejecutar al cargar
+        handleHashChange()
+
+        // Escuchar cambios en el hash
+        window.addEventListener('hashchange', handleHashChange)
+        return () => window.removeEventListener('hashchange', handleHashChange)
+    }, [products])
+
+    // Limpiar hash cuando se cierra el modal
+    const handleModalChange = (open: boolean) => {
+        setModalOpen(open)
+        if (!open && window.location.hash.startsWith('#producto-')) {
+            // Limpiar el hash sin recargar la página
+            history.pushState(null, '', window.location.pathname + window.location.search)
+        }
+    }
+
     const handleProductClick = (product: any) => {
         setSelectedProduct(product)
         setModalOpen(true)
+        // Actualizar hash en la URL
+        history.pushState(null, '', `#producto-${product.id}`)
     }
 
     // Filtrar productos según búsqueda
@@ -64,6 +103,13 @@ export default function StoreProducts({
 
                     const displayImage = mainImage || product.image_url
 
+                    // Calcular si el producto está agotado
+                    const productVariantsForThis = productVariants?.filter(v => v.product_id === product.id) || []
+                    const hasVariants = productVariantsForThis.length > 0
+                    const isOutOfStock = hasVariants 
+                        ? productVariantsForThis.every(v => (v.stock || 0) <= 0)
+                        : false // Si no tiene variantes, asumir disponible
+
                     return (
                         <Card
                             key={product.id}
@@ -75,11 +121,19 @@ export default function StoreProducts({
                                     <img
                                         src={displayImage}
                                         alt={product.title}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
                                     />
                                 ) : (
                                     <div className="flex items-center justify-center h-full text-slate-300 text-[9px] uppercase font-bold tracking-widest text-center px-1">
                                         Sin Foto
+                                    </div>
+                                )}
+                                {/* Badge de Agotado */}
+                                {isOutOfStock && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded">
+                                            AGOTADO
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -90,7 +144,7 @@ export default function StoreProducts({
                             </CardContent>
 
                             <CardFooter className="p-1 pt-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                <AddToCartButton product={product} />
+                                <AddToCartButton product={product} disabled={isOutOfStock} />
                             </CardFooter>
                         </Card>
                     )
@@ -152,7 +206,10 @@ export default function StoreProducts({
                     images={selectedProductImages}
                     variants={selectedProductVariants}
                     open={modalOpen}
-                    onOpenChange={setModalOpen}
+                    onOpenChange={handleModalChange}
+                    storeId={storeId}
+                    storePhone={storePhone}
+                    storeSlug={storeSlug}
                 />
             )}
         </>

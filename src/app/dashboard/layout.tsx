@@ -7,7 +7,8 @@ import {
   LogOut, 
   Store,
   Menu,
-  Tags
+  Tags,
+  Boxes
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -99,6 +100,7 @@ function NavLinks() {
       <NavItem href="/dashboard" icon={LayoutDashboard}>Resumen</NavItem>
       <NavItem href="/dashboard/products" icon={Package}>Productos</NavItem>
       <NavItem href="/dashboard/categories" icon={Tags}>Categorías</NavItem>
+      <NavItem href="/dashboard/inventory" icon={Boxes}>Inventario</NavItem>
       <NavItem href="/dashboard/orders" icon={ShoppingBag}>Pedidos</NavItem>
       <NavItem href="/dashboard/settings" icon={Settings}>Configuración</NavItem>
     </>
