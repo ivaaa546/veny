@@ -32,8 +32,10 @@
 - **Supabase** (Backend-as-a-Service)
   - PostgreSQL con Row Level Security (RLS)
   - Authentication (email/password)
-  - Storage (bucket `store-images`)
-  - Triggers para auto-limpieza de archivos
+- **Cloudinary** (Gestión de Imágenes)
+  - Upload y optimización automática de imágenes
+  - CDN global para mejor rendimiento
+  - Transformaciones automáticas (f_auto, q_auto)
 
 ### Estado & Lógica
 - **Server Actions** (Backend en frontend, sin API Routes)
@@ -155,7 +157,7 @@
 - Múltiples imágenes por producto
 - Orden personalizable (`display_order`)
 - Miniaturas interactivas en modal
-- Auto-limpieza de storage al eliminar
+- Auto-limpieza de Cloudinary al eliminar
 
 **Tabla BD:** `product_images`
 ```sql
@@ -186,12 +188,12 @@
 
 3. **`deleteProduct(productId: string)`**
    - Elimina producto (CASCADE elimina variantes e imágenes)
-   - Elimina archivos del storage
+   - Elimina archivos de Cloudinary
    - Limpieza completa
 
 4. **`deleteProductImage(imageId: string, productId: string)`**
    - Elimina imagen específica de la galería
-   - Elimina archivo del storage
+   - Elimina archivo de Cloudinary
 
 5. **`toggleProductStatus(productId: string, currentStatus: boolean)`**
    - Activa/desactiva productos
@@ -229,8 +231,8 @@
 **Flujo de subida:**
 1. Usuario selecciona archivos
 2. Se muestran previews locales
-3. Al submit, se suben a Supabase Storage (`store-images`)
-4. Se obtienen URLs públicas
+3. Al submit, se suben a Cloudinary via Server Action
+4. Se obtienen URLs públicas optimizadas
 5. Se serializan como JSON y se envían al Server Action
 
 **Páginas que usan este componente:**
@@ -567,28 +569,22 @@ Helper para políticas RLS que verifica si el usuario es admin o moderador.
 #### 4. `is_product_owner(product_uuid)`
 Verifica si el usuario actual es dueño del producto (vía store).
 
-#### 5. `extract_storage_path(url)`
-Extrae el path relativo desde una URL completa de Supabase Storage.
+### Gestión de Imágenes (Cloudinary)
 
-#### 6. `delete_storage_object(bucket_text, file_path)`
-Elimina un archivo de `storage.objects` (usado por triggers).
+Las imágenes se gestionan con Cloudinary en lugar de Supabase Storage:
 
-### Triggers de Auto-Limpieza 🧹
+- **Upload**: Via `src/actions/cloudinary.ts` → `uploadImage()`
+- **Delete**: Via `src/actions/cloudinary.ts` → `deleteImage()`
+- **Helpers**: `src/lib/cloudinary.ts` (extractPublicId, isCloudinaryUrl, etc.)
 
-Eliminan automáticamente archivos huérfanos del storage:
-
-```sql
--- Al eliminar imagen de galería
-on_product_image_deleted → delete_product_image_from_storage()
-
--- Al cambiar/eliminar imagen principal de producto
-on_product_image_changed → delete_product_main_image_from_storage()
-
--- Al cambiar/eliminar logo de tienda
-on_store_logo_changed → delete_store_logo_from_storage()
-
--- Al cambiar/eliminar banner de tienda
-on_store_banner_changed → delete_store_banner_from_storage()
+**Estructura de carpetas en Cloudinary:**
+```
+veny/
+├── products/          # Imágenes de productos
+├── stores/
+│   └── {store_id}/
+│       ├── logos/     # Logos de tiendas
+│       └── banners/   # Banners de tiendas
 ```
 
 ### Row Level Security (RLS)
@@ -615,19 +611,6 @@ on_store_banner_changed → delete_store_banner_from_storage()
 "Admins gestionan productos" FOR ALL TO authenticated
   USING (is_admin_or_mod())
   WITH CHECK (is_admin_or_mod())
-```
-
-#### Políticas de Storage (bucket: store-images):
-```sql
--- Usuarios autenticados pueden subir
-"allow_authenticated_uploads" FOR INSERT TO authenticated
-
--- Todos pueden leer (público)
-"allow_public_reads" FOR SELECT TO public
-
--- Autenticados pueden actualizar/eliminar
-"allow_authenticated_updates" FOR UPDATE TO authenticated
-"allow_authenticated_deletes" FOR DELETE TO authenticated
 ```
 
 ---
@@ -664,7 +647,8 @@ veny/
 │   │   ├── stores.ts                  # CRUD tiendas
 │   │   ├── categories.ts              # CRUD categorías
 │   │   ├── orders.ts                  # Gestión de órdenes
-│   │   └── dashboard.ts               # Stats
+│   │   ├── dashboard.ts               # Stats
+│   │   └── cloudinary.ts              # ⭐ Upload/delete imágenes a Cloudinary
 │   │
 │   ├── components/
 │   │   ├── ui/                        # Shadcn UI components
@@ -710,6 +694,7 @@ veny/
 │   │
 │   ├── lib/
 │   │   ├── supabase.ts                # Cliente de Supabase
+│   │   ├── cloudinary.ts              # ⭐ Helpers para Cloudinary (upload, delete, etc.)
 │   │   ├── whatsapp.ts                # Generación mensaje WhatsApp
 │   │   ├── phone.ts                   # Formateo de teléfonos
 │   │   └── utils.ts                   # Helpers (cn, etc.)
@@ -722,9 +707,8 @@ veny/
 │   └── favicon.ico
 │
 ├── bd.sql                             # ⭐ Schema completo de BD
-├── fix_storage_functions.sql         # Script de corrección de triggers
-├── README_STORAGE_CLEANUP.md         # Docs de limpieza de storage
-├── estructura.md                      # Estructura del proyecto (legacy)
+├── scripts/
+│   └── migrate-images-to-cloudinary.ts # Script de migración (ya ejecutado)
 ├── AGENT.md                          # 📄 Este archivo
 ├── README.md                         # Documentación general
 ├── package.json                      # Dependencias
@@ -744,8 +728,15 @@ veny/
 Archivo: `.env.local`
 
 ```bash
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://[tu-proyecto].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ[tu-key]...
+
+# Cloudinary (para gestión de imágenes)
+CLOUDINARY_CLOUD_NAME=tu-cloud-name
+CLOUDINARY_API_KEY=tu-api-key
+CLOUDINARY_API_SECRET=tu-api-secret
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=tu-cloud-name
 ```
 
 ---
@@ -853,7 +844,7 @@ Selecciona múltiples imágenes → Preview local
   ↓
 Agrega variantes (tipo, valor, precio)
   ↓
-Submit → Subida de imágenes a Storage
+Submit → Subida de imágenes a Cloudinary
   ↓
 Server Action createProduct()
   ↓
@@ -949,10 +940,11 @@ redirect(`/pizzeria-juan`) automático
 
 ## 🐛 Notas Técnicas
 
-### Storage Auto-Limpieza
-- Los triggers SQL eliminan archivos automáticamente
-- Si un trigger falla, el archivo queda huérfano
-- Script de limpieza manual: `fix_storage_functions.sql`
+### Cloudinary para Imágenes
+- Las imágenes se almacenan en Cloudinary con optimización automática
+- Al eliminar productos/tiendas, se eliminan las imágenes de Cloudinary
+- Las URLs de Cloudinary incluyen transformaciones automáticas (f_auto, q_auto)
+- Helpers disponibles en `src/lib/cloudinary.ts`
 
 ### RLS y Performance
 - Las políticas RLS pueden ser costosas en queries complejos
@@ -976,13 +968,13 @@ redirect(`/pizzeria-juan`) automático
 ### Documentación Oficial
 - [Next.js Docs](https://nextjs.org/docs)
 - [Supabase Docs](https://supabase.com/docs)
+- [Cloudinary Docs](https://cloudinary.com/documentation)
 - [Shadcn UI](https://ui.shadcn.com)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [Zustand](https://zustand-demo.pmnd.rs)
 
 ### Supabase Dashboard
 - Database: Ver tablas, ejecutar SQL, ver políticas RLS
-- Storage: Ver/eliminar archivos manualmente
 - Authentication: Ver usuarios, resetear passwords
 - SQL Editor: Ejecutar queries
 
@@ -998,8 +990,8 @@ redirect(`/pizzeria-juan`) automático
 - ✅ CRUD de productos
 - ✅ Variantes de productos (tipo + valor + precio)
 - ✅ Galerías de imágenes por producto
-- ✅ Upload de imágenes a Supabase Storage
-- ✅ Auto-limpieza de storage con triggers
+- ✅ Upload de imágenes a Cloudinary
+- ✅ Auto-limpieza de imágenes en Cloudinary
 - ✅ Row Level Security (RLS)
 - ✅ Dashboard completo para vendedores
 - ✅ Storefront público responsive
@@ -1057,12 +1049,12 @@ redirect(`/pizzeria-juan`) automático
 5. **Testing:**
    - Prueba en móvil y desktop
    - Verifica que RLS funcione (probando con diferentes usuarios)
-   - Verifica auto-limpieza de storage
 
 ---
 
 ## 📝 Historial de Cambios
 
+- **2026-01-26**: Migración de Supabase Storage a Cloudinary para gestión de imágenes
 - **2026-01-05**: Cambio de diseño UI a paleta "SaaS Pro" (Indigo/Slate). Actualización completa del AGENT.md reflejando el estado actual del proyecto
 - **2026-01-02**: Implementación de sistema de variantes e imágenes múltiples
 - **2025-12-27**: Inicio del proyecto VENY

@@ -3,7 +3,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { extractStoragePath, deleteFromStorage } from '@/lib/supabase'
+import { deleteImage } from '@/actions/cloudinary'
 
 // Helper para crear cliente Supabase
 async function getSupabaseClient() {
@@ -276,12 +276,9 @@ export async function updateStoreSettings(formData: FormData) {
     if (logoUrl) {
         updateData.logo_url = logoUrl
         
-        // Si hay un logo antiguo y es diferente al nuevo, eliminarlo del storage
+        // Si hay un logo antiguo y es diferente al nuevo, eliminarlo de Cloudinary
         if (currentStoreData?.logo_url && currentStoreData.logo_url !== logoUrl) {
-            const oldLogoPath = extractStoragePath(currentStoreData.logo_url)
-            if (oldLogoPath) {
-                await deleteFromStorage(supabase, oldLogoPath)
-            }
+            await deleteImage(currentStoreData.logo_url)
         }
     }
 
@@ -289,12 +286,9 @@ export async function updateStoreSettings(formData: FormData) {
     if (bannerUrl) {
         updateData.banner_url = bannerUrl
         
-        // Si hay un banner antiguo y es diferente al nuevo, eliminarlo del storage
+        // Si hay un banner antiguo y es diferente al nuevo, eliminarlo de Cloudinary
         if (currentStoreData?.banner_url && currentStoreData.banner_url !== bannerUrl) {
-            const oldBannerPath = extractStoragePath(currentStoreData.banner_url)
-            if (oldBannerPath) {
-                await deleteFromStorage(supabase, oldBannerPath)
-            }
+            await deleteImage(currentStoreData.banner_url)
         }
     }
 

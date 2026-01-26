@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { updateStoreSettings } from '@/actions/stores'
-import { supabase } from '@/lib/supabase'
+import { uploadImage } from '@/actions/cloudinary'
 import { Loader2, Upload, Store, Check, ImageIcon, Instagram, Facebook, Video } from 'lucide-react'
 
 interface StoreData {
@@ -27,10 +27,9 @@ interface StoreData {
 
 interface StoreSettingsFormProps {
     store: StoreData
-    userId: string
 }
 
-export default function StoreSettingsForm({ store, userId }: StoreSettingsFormProps) {
+export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
 
@@ -83,42 +82,32 @@ export default function StoreSettingsForm({ store, userId }: StoreSettingsFormPr
             formData.set('facebook_url', facebook)
             formData.set('tiktok_url', tiktok)
 
-            // Subir logo si hay uno nuevo
+            // Subir logo si hay uno nuevo (usando Cloudinary)
             if (logoFile) {
-                const fileExt = logoFile.name.split('.').pop()
-                const fileName = `logo-${Date.now()}.${fileExt}`
-                const filePath = `${userId}/${fileName}`
-
-                const { error: uploadError } = await supabase.storage
-                    .from('store-images')
-                    .upload(filePath, logoFile)
-
-                if (uploadError) throw uploadError
-
-                const { data } = supabase.storage
-                    .from('store-images')
-                    .getPublicUrl(filePath)
-
-                formData.set('logo_url', data.publicUrl)
+                const uploadFormData = new FormData()
+                uploadFormData.append('file', logoFile)
+                
+                const result = await uploadImage(uploadFormData, `veny/stores/${store.id}/logos`)
+                
+                if (!result.success || !result.url) {
+                    throw new Error(result.error || 'Error al subir el logo')
+                }
+                
+                formData.set('logo_url', result.url)
             }
 
-            // Subir banner si hay uno nuevo
+            // Subir banner si hay uno nuevo (usando Cloudinary)
             if (bannerFile) {
-                const fileExt = bannerFile.name.split('.').pop()
-                const fileName = `banner-${Date.now()}.${fileExt}`
-                const filePath = `${userId}/${fileName}`
-
-                const { error: uploadError } = await supabase.storage
-                    .from('store-images')
-                    .upload(filePath, bannerFile)
-
-                if (uploadError) throw uploadError
-
-                const { data } = supabase.storage
-                    .from('store-images')
-                    .getPublicUrl(filePath)
-
-                formData.set('banner_url', data.publicUrl)
+                const uploadFormData = new FormData()
+                uploadFormData.append('file', bannerFile)
+                
+                const result = await uploadImage(uploadFormData, `veny/stores/${store.id}/banners`)
+                
+                if (!result.success || !result.url) {
+                    throw new Error(result.error || 'Error al subir el banner')
+                }
+                
+                formData.set('banner_url', result.url)
             }
 
             await updateStoreSettings(formData)

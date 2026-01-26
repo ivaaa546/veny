@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createProduct, updateProduct, deleteProductImage } from '@/actions/products'
-import { supabase } from '@/lib/supabase'
+import { uploadImage } from '@/actions/cloudinary'
 import { Loader2, UploadCloud, X, Plus, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -108,25 +108,22 @@ export default function ProductForm({ userId, categories, initialData }: Product
         try {
             const formData = new FormData(e.currentTarget)
 
-            // 1. Subir TODAS las imágenes NUEVAS a Supabase Storage
+            // 1. Subir TODAS las imágenes NUEVAS a Cloudinary
             const imageUrls: string[] = []
 
             for (const file of imageFiles) {
-                const fileExt = file.name.split('.').pop()
-                const fileName = `${Date.now()}-${Math.random()}.${fileExt}`
-                const filePath = `${userId}/${fileName}`
-
-                const { error: uploadError } = await supabase.storage
-                    .from('store-images')
-                    .upload(filePath, file)
-
-                if (uploadError) throw uploadError
-
-                const { data } = supabase.storage
-                    .from('store-images')
-                    .getPublicUrl(filePath)
-
-                imageUrls.push(data.publicUrl)
+                // Crear FormData para cada archivo
+                const uploadFormData = new FormData()
+                uploadFormData.append('file', file)
+                
+                // Subir a Cloudinary via Server Action
+                const result = await uploadImage(uploadFormData, `veny/products/${userId}`)
+                
+                if (!result.success || !result.url) {
+                    throw new Error(result.error || 'Error al subir imagen')
+                }
+                
+                imageUrls.push(result.url)
             }
 
             // 2. Serializar datos como JSON strings

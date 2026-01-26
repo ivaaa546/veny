@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { extractStoragePath, deleteMultipleFromStorage } from '@/lib/supabase'
+import { deleteImage, deleteMultipleImages } from '@/actions/cloudinary'
 
 // Función helper para obtener el cliente de Supabase autenticado
 async function getAuthenticatedSupabase() {
@@ -179,24 +179,26 @@ export async function deleteProduct(productId: string) {
         throw new Error(`No se pudo borrar el producto: ${error.message}`)
     }
 
-    // 3. Eliminar archivos del storage (después de borrar el producto)
-    const imagesToDelete: (string | null)[] = []
+    // 3. Eliminar archivos de Cloudinary (después de borrar el producto)
+    const imagesToDelete: string[] = []
 
-    // Agregar imagen principal del producto
+    // Agregar imagen principal del producto (legacy field)
     if (product?.image_url) {
-        imagesToDelete.push(extractStoragePath(product.image_url))
+        imagesToDelete.push(product.image_url)
     }
 
-    // Agregar imágenes adicionales
+    // Agregar imágenes de la galería
     if (productImages && productImages.length > 0) {
         productImages.forEach(img => {
-            imagesToDelete.push(extractStoragePath(img.image_url))
+            if (img.image_url) {
+                imagesToDelete.push(img.image_url)
+            }
         })
     }
 
-    // Eliminar todas las imágenes del storage
+    // Eliminar todas las imágenes de Cloudinary
     if (imagesToDelete.length > 0) {
-        await deleteMultipleFromStorage(supabase, imagesToDelete)
+        await deleteMultipleImages(imagesToDelete)
     }
 
     // 4. Refrescar la pantalla
@@ -347,12 +349,9 @@ export async function deleteProductImage(imageId: string, productId: string) {
         throw new Error('No se pudo borrar la imagen')
     }
 
-    // 3. Eliminar el archivo del storage
+    // 3. Eliminar el archivo de Cloudinary
     if (image?.image_url) {
-        const filePath = extractStoragePath(image.image_url)
-        if (filePath) {
-            await deleteMultipleFromStorage(supabase, [filePath])
-        }
+        await deleteImage(image.image_url)
     }
 
     revalidatePath(`/dashboard/products/${productId}`)

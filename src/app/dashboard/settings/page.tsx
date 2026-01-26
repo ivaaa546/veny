@@ -60,7 +60,7 @@ export default async function SettingsPage() {
             </div>
 
             {/* Formulario de Tienda */}
-            <StoreSettingsForm store={store} userId={session.user.id} />
+            <StoreSettingsForm store={store} />
 
             {/* Cambio de Contraseña */}
             <div className="max-w-2xl mx-auto">
