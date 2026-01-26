@@ -2,26 +2,44 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { updateOrderStatus } from '@/actions/orders'
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
-import { toast } from 'sonner' // O usar alert si no tienes sonner
+import { toast } from 'sonner'
+import { OrderStatus } from '@/types'
 
 interface OrderActionsProps {
     orderId: string
-    currentStatus: string
+    currentStatus: OrderStatus | string
 }
 
 export default function OrderActions({ orderId, currentStatus }: OrderActionsProps) {
     const [loading, setLoading] = useState(false)
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
-    const handleStatusChange = async (newStatus: string) => {
+    const handleStatusChange = async (newStatus: OrderStatus) => {
         setLoading(true)
         try {
             await updateOrderStatus(orderId, newStatus)
-            // toast.success('Estado actualizado') // Si tuvieras toast
+            toast.success(
+                newStatus === 'completed' 
+                    ? 'Pedido marcado como completado' 
+                    : 'Pedido cancelado'
+            )
+            setCancelDialogOpen(false)
         } catch (error) {
             console.error('Error:', error)
-            alert('Error al actualizar el estado')
+            toast.error('Error al actualizar el estado del pedido')
         } finally {
             setLoading(false)
         }
@@ -39,19 +57,50 @@ export default function OrderActions({ orderId, currentStatus }: OrderActionsPro
                 size="sm" 
                 className="bg-green-600 hover:bg-green-700"
             >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                {loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
                 Marcar como Completado
             </Button>
             
-            <Button 
-                onClick={() => handleStatusChange('cancelled')} 
-                disabled={loading}
-                size="sm" 
-                variant="destructive"
-            >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
-                Cancelar Pedido
-            </Button>
+            <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button 
+                        disabled={loading}
+                        size="sm" 
+                        variant="destructive"
+                    >
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Cancelar Pedido
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Cancelar este pedido?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción marcará el pedido como cancelado. El cliente debería ser notificado de esta cancelación.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={loading}>No, volver</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault()
+                                handleStatusChange('cancelled')
+                            }}
+                            disabled={loading}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            {loading ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            Sí, cancelar pedido
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

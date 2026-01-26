@@ -1,7 +1,10 @@
 'use server'
 
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { Order, OrderStatus, DeliveryPlace } from '@/types'
 
 // Cliente de Supabase para acciones públicas (sin autenticación requerida)
 const supabase = createClient(
@@ -9,7 +12,11 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-interface CartItem {
+// ====================================================================
+// TIPOS PARA CREAR ÓRDENES
+// ====================================================================
+
+interface CartItemForOrder {
     id: string
     title: string
     price: number
@@ -18,21 +25,60 @@ interface CartItem {
     variantId?: string // ID de la variante para decrementar stock
 }
 
-interface OrderData {
+interface CreateOrderData {
     storeId: string
     customerName: string
     customerLastName?: string
     customerPhone?: string
-    customerAddress?: string // Legacy field, mantener por compatibilidad
+    customerAddress?: string // Legacy field
     customerDepartment?: string
     customerMunicipality?: string
     customerZone?: string
     customerReference?: string
-    deliveryPlace?: string // casa, trabajo, otro
+    deliveryPlace?: DeliveryPlace
     total: number
 }
 
-export async function createOrder(orderData: OrderData, cartItems: CartItem[]) {
+interface CreateOrderResult {
+    orderId: string
+}
+
+// ====================================================================
+// HELPER PARA CLIENTE AUTENTICADO
+// ====================================================================
+
+async function getAuthenticatedSupabase() {
+    const cookieStore = await cookies()
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll()
+                },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            cookieStore.set(name, value, options)
+                        )
+                    } catch {
+                        // Ignorar errores en Server Components
+                    }
+                },
+            },
+        }
+    )
+}
+
+// ====================================================================
+// CREAR ORDEN (PÚBLICO - Para checkout)
+// ====================================================================
+
+export async function createOrder(
+    orderData: CreateOrderData, 
+    cartItems: CartItemForOrder[]
+): Promise<CreateOrderResult> {
     // Preparar items para el JSONB
     const itemsJson = cartItems.map(item => ({
         product_id: item.id,
@@ -74,7 +120,6 @@ export async function createOrder(orderData: OrderData, cartItems: CartItem[]) {
     }
 
     // Actualizar la orden con los campos adicionales (si existen las columnas)
-    // Esto fallará silenciosamente si las columnas no existen aún
     try {
         const updateData: Record<string, string | null> = {}
         if (orderData.customerLastName) updateData.customer_last_name = orderData.customerLastName
@@ -126,37 +171,11 @@ export async function createOrder(orderData: OrderData, cartItems: CartItem[]) {
     return { orderId }
 }
 
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+// ====================================================================
+// OBTENER ÓRDENES DE UNA TIENDA (AUTENTICADO)
+// ====================================================================
 
-// Helper para obtener cliente autenticado
-async function getAuthenticatedSupabase() {
-    const cookieStore = await cookies()
-    return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return cookieStore.getAll()
-                },
-                setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        )
-                    } catch {
-                        // Ignorar errores en Server Components
-                    }
-                },
-            },
-        }
-    )
-}
-
-// Función para obtener pedidos de una tienda (para el dashboard)
-export async function getStoreOrders(storeId: string) {
-    // Usamos cliente autenticado para respetar RLS
+export async function getStoreOrders(storeId: string): Promise<Order[]> {
     const supabase = await getAuthenticatedSupabase()
     
     const { data: orders, error } = await supabase
@@ -173,12 +192,17 @@ export async function getStoreOrders(storeId: string) {
         return []
     }
 
-    return orders || []
+    return (orders || []) as Order[]
 }
 
-// Función para actualizar el estado de un pedido
-export async function updateOrderStatus(orderId: string, status: string) {
-    // IMPORTANTE: Usar cliente autenticado
+// ====================================================================
+// ACTUALIZAR ESTADO DE ORDEN (AUTENTICADO)
+// ====================================================================
+
+export async function updateOrderStatus(
+    orderId: string, 
+    status: OrderStatus | string
+): Promise<void> {
     const supabase = await getAuthenticatedSupabase()
 
     const { error } = await supabase
@@ -192,4 +216,55 @@ export async function updateOrderStatus(orderId: string, status: string) {
     }
 
     revalidatePath('/dashboard/orders')
+}
+
+// ====================================================================
+// OBTENER ESTADÍSTICAS DE ÓRDENES (AUTENTICADO)
+// ====================================================================
+
+interface OrderStats {
+    totalOrders: number
+    pendingOrders: number
+    completedOrders: number
+    cancelledOrders: number
+    totalRevenue: number
+}
+
+export async function getOrderStats(storeId: string): Promise<OrderStats> {
+    const supabase = await getAuthenticatedSupabase()
+    
+    const { data: orders, error } = await supabase
+        .from('orders')
+        .select('status, total')
+        .eq('store_id', storeId)
+
+    if (error) {
+        console.error('Error obteniendo estadísticas:', error)
+        return {
+            totalOrders: 0,
+            pendingOrders: 0,
+            completedOrders: 0,
+            cancelledOrders: 0,
+            totalRevenue: 0,
+        }
+    }
+
+    const stats = (orders || []).reduce((acc, order) => {
+        acc.totalOrders++
+        if (order.status === 'pending') acc.pendingOrders++
+        if (order.status === 'completed') {
+            acc.completedOrders++
+            acc.totalRevenue += Number(order.total)
+        }
+        if (order.status === 'cancelled') acc.cancelledOrders++
+        return acc
+    }, {
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        cancelledOrders: 0,
+        totalRevenue: 0,
+    })
+
+    return stats
 }

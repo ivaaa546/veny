@@ -108,8 +108,8 @@ export default function CartSidebar({ storeId, storePhone, children }: CartSideb
                             storePhone={storePhone}
                             total={total}
                         >
-                            <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg">
-                                Completar Pedido por WhatsApp
+<Button className="w-full bg-black hover:bg-gray-800 h-12 text-lg">
+                                Completar Pedido
                             </Button>
                         </CheckoutDialog>
                     </div>

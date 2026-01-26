@@ -24,7 +24,7 @@ import {
 import { useCart, CartItem } from '@/hooks/use-cart'
 import { formatPhoneForWhatsApp } from '@/lib/phone'
 import { listaDepartamentos, getMunicipios, getNombreDepartamento } from '@/lib/guatemala'
-import { Loader2, MessageCircle, Truck } from 'lucide-react'
+import { Loader2, CheckCircle, Truck } from 'lucide-react'
 
 import { createOrder } from '@/actions/orders'
 
@@ -374,7 +374,7 @@ export default function CheckoutDialog({
                     <Button
                         type="submit"
                         disabled={loading || !isFormValid}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-black hover:bg-gray-800"
                     >
                         {loading ? (
                             <>
@@ -383,8 +383,8 @@ export default function CheckoutDialog({
                             </>
                         ) : (
                             <>
-                                <MessageCircle className="mr-2 h-4 w-4" />
-                                Confirmar por WhatsApp
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Confirmar Pedido
                             </>
                         )}
                     </Button>

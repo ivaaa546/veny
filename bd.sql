@@ -637,6 +637,185 @@ CREATE POLICY "allow_authenticated_deletes"
 
 
 -- ====================================================================
+-- 8. SISTEMA DE ÓRDENES
+-- ====================================================================
+
+-- 8.1 ORDERS (Pedidos)
+-- ====================================================================
+CREATE TABLE public.orders (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  store_id uuid REFERENCES public.stores(id) ON DELETE CASCADE NOT NULL,
+  status text DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
+  total numeric(10,2) NOT NULL CHECK (total >= 0),
+  customer_name text NOT NULL,
+  customer_phone text,
+  customer_address text,
+  customer_last_name text,
+  customer_department text,
+  customer_municipality text,
+  customer_zone text,
+  customer_reference text,
+  delivery_place text CHECK (delivery_place IS NULL OR delivery_place IN ('casa', 'trabajo', 'otro')),
+  order_method text DEFAULT 'whatsapp' CHECK (order_method IN ('whatsapp', 'email', 'web')),
+  created_at timestamptz DEFAULT NOW(),
+  updated_at timestamptz DEFAULT NOW()
+);
+
+-- Comentarios de columnas
+COMMENT ON TABLE public.orders IS 'Pedidos realizados por clientes en las tiendas';
+COMMENT ON COLUMN public.orders.customer_last_name IS 'Apellido del cliente';
+COMMENT ON COLUMN public.orders.customer_department IS 'Departamento de Guatemala';
+COMMENT ON COLUMN public.orders.customer_municipality IS 'Municipio del departamento';
+COMMENT ON COLUMN public.orders.customer_zone IS 'Zona de la ciudad (ej: Zona 10)';
+COMMENT ON COLUMN public.orders.customer_reference IS 'Punto de referencia para la entrega';
+COMMENT ON COLUMN public.orders.delivery_place IS 'Tipo de lugar: casa, trabajo, otro';
+COMMENT ON COLUMN public.orders.order_method IS 'Método de pedido: whatsapp, email o web';
+
+
+-- 8.2 ORDER_ITEMS (Items de pedidos)
+-- ====================================================================
+CREATE TABLE public.order_items (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
+  product_id uuid REFERENCES public.products(id) ON DELETE SET NULL,
+  product_title text NOT NULL,
+  variant_info text,
+  quantity integer NOT NULL CHECK (quantity > 0),
+  price numeric(10,2) NOT NULL CHECK (price >= 0),
+  created_at timestamptz DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.order_items IS 'Productos incluidos en cada pedido';
+
+
+-- 8.3 Índices para órdenes
+-- ====================================================================
+CREATE INDEX idx_orders_store_id ON public.orders(store_id);
+CREATE INDEX idx_orders_status ON public.orders(status);
+CREATE INDEX idx_orders_created_at ON public.orders(created_at DESC);
+CREATE INDEX idx_orders_department ON public.orders(customer_department);
+CREATE INDEX idx_orders_municipality ON public.orders(customer_municipality);
+CREATE INDEX idx_order_items_order_id ON public.order_items(order_id);
+
+
+-- 8.4 Trigger para updated_at en orders
+-- ====================================================================
+CREATE TRIGGER update_orders_updated_at 
+  BEFORE UPDATE ON public.orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- 8.5 Función RPC para crear pedidos de forma segura
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.create_new_order(
+  p_store_id uuid,
+  p_total numeric,
+  p_customer_name text,
+  p_customer_phone text DEFAULT NULL,
+  p_customer_address text DEFAULT NULL,
+  p_items jsonb DEFAULT '[]'::jsonb
+)
+RETURNS uuid AS $$
+DECLARE
+  new_order_id uuid;
+  item jsonb;
+BEGIN
+  -- Verificar que la tienda existe y está activa
+  IF NOT EXISTS (
+    SELECT 1 FROM public.stores 
+    WHERE id = p_store_id 
+    AND is_active = true 
+    AND deleted_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Tienda no encontrada o inactiva';
+  END IF;
+
+  -- Insertar la orden
+  INSERT INTO public.orders (store_id, total, customer_name, customer_phone, customer_address)
+  VALUES (p_store_id, p_total, p_customer_name, p_customer_phone, p_customer_address)
+  RETURNING id INTO new_order_id;
+
+  -- Insertar los items del pedido
+  FOR item IN SELECT * FROM jsonb_array_elements(p_items)
+  LOOP
+    INSERT INTO public.order_items (order_id, product_id, product_title, variant_info, quantity, price)
+    VALUES (
+      new_order_id,
+      (item->>'product_id')::uuid,
+      item->>'product_title',
+      item->>'variant_info',
+      (item->>'quantity')::integer,
+      (item->>'price')::numeric
+    );
+  END LOOP;
+
+  RETURN new_order_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.create_new_order IS 'Crea un nuevo pedido con sus items de forma atómica';
+
+
+-- 8.6 RLS para órdenes
+-- ====================================================================
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para ORDERS
+-- Cualquier persona puede crear pedidos (checkout público)
+CREATE POLICY "Crear pedidos" 
+  ON public.orders FOR INSERT 
+  TO anon, authenticated
+  WITH CHECK (true);
+
+-- Vendedores ven solo los pedidos de su tienda
+CREATE POLICY "Ver mis pedidos" 
+  ON public.orders FOR SELECT 
+  TO authenticated
+  USING (
+    auth.uid() IN (SELECT user_id FROM public.stores WHERE id = orders.store_id)
+    OR is_admin_or_mod()
+  );
+
+-- Vendedores pueden actualizar pedidos de su tienda (cambiar estado)
+CREATE POLICY "Actualizar mis pedidos" 
+  ON public.orders FOR UPDATE 
+  TO authenticated
+  USING (
+    auth.uid() IN (SELECT user_id FROM public.stores WHERE id = orders.store_id)
+  )
+  WITH CHECK (
+    auth.uid() IN (SELECT user_id FROM public.stores WHERE id = orders.store_id)
+  );
+
+-- Admins pueden gestionar todos los pedidos
+CREATE POLICY "Admins gestionan pedidos" 
+  ON public.orders FOR ALL 
+  TO authenticated
+  USING (is_admin_or_mod())
+  WITH CHECK (is_admin_or_mod());
+
+-- Políticas para ORDER_ITEMS
+-- Insertar items (se hace via RPC, pero por si acaso)
+CREATE POLICY "Crear items de pedido" 
+  ON public.order_items FOR INSERT 
+  TO anon, authenticated
+  WITH CHECK (true);
+
+-- Ver items de pedidos de mi tienda
+CREATE POLICY "Ver items de mis pedidos" 
+  ON public.order_items FOR SELECT 
+  TO authenticated
+  USING (
+    order_id IN (
+      SELECT id FROM public.orders 
+      WHERE auth.uid() IN (SELECT user_id FROM public.stores WHERE id = orders.store_id)
+    )
+    OR is_admin_or_mod()
+  );
+
+
+-- ====================================================================
 -- FIN DEL SCRIPT
 -- ====================================================================
 
