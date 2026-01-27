@@ -53,7 +53,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
     const { store, products, categories, productImages, productVariants } = data
 
     return (
-        <div className="min-h-screen bg-gray-50/50 relative">
+        <div className="min-h-screen bg-gray-100 relative">
 
             {/* 1. NAVBAR */}
             <StoreNavbar

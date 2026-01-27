@@ -95,7 +95,7 @@ export default function StoreProducts({
         }
 
         return (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 mt-6 animate-in fade-in duration-500">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6 animate-in fade-in duration-500">
                 {items.map((product) => {
                     const mainImage = productImages
                         ?.filter(img => img.product_id === product.id)
@@ -106,22 +106,22 @@ export default function StoreProducts({
                     // Calcular si el producto está agotado
                     const productVariantsForThis = productVariants?.filter(v => v.product_id === product.id) || []
                     const hasVariants = productVariantsForThis.length > 0
-                    const isOutOfStock = hasVariants 
+                    const isOutOfStock = hasVariants
                         ? productVariantsForThis.every(v => (v.stock || 0) <= 0)
                         : false // Si no tiene variantes, asumir disponible
 
                     return (
                         <Card
                             key={product.id}
-                            className="overflow-hidden shadow-none hover:shadow-sm transition-all cursor-pointer border-none bg-transparent group"
+                            className="overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-slate-200 bg-white group h-full flex flex-col justify-between min-h-[416px] rounded-2xl p-4"
                             onClick={() => handleProductClick(product)}
                         >
-                            <div className="aspect-[4/5] relative bg-slate-100 rounded-lg overflow-hidden">
+                            <div className="aspect-square relative rounded-xl overflow-hidden mb-2">
                                 {displayImage ? (
                                     <img
                                         src={displayImage}
                                         alt={product.title}
-                                        className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
+                                        className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
                                     />
                                 ) : (
                                     <div className="flex items-center justify-center h-full text-slate-300 text-[9px] uppercase font-bold tracking-widest text-center px-1">
