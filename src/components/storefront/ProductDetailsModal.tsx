@@ -34,6 +34,7 @@ export default function ProductDetailsModal({
     const [selectedVariant, setSelectedVariant] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
     const [checkoutOpen, setCheckoutOpen] = useState(false)
+    const [quantity, setQuantity] = useState(1)
 
     const cart = useCart()
 
@@ -78,16 +79,18 @@ export default function ProductDetailsModal({
 
     // Manejar "Comprar Ahora"
     const handleBuyNow = () => {
-        // Agregar al carrito
-        cart.addItem({
-            id: product.id,
-            title: product.title,
-            price: finalPrice,
-            image_url: productImages[0] ?? product.image_url ?? null,
-            selectedVariant: selectedVariantData
-                ? `${selectedVariantData.variant_type}: ${selectedVariantData.variant_value}`
-                : undefined
-        })
+        // Agregar al carrito con la cantidad seleccionada
+        for (let i = 0; i < quantity; i++) {
+            cart.addItem({
+                id: product.id,
+                title: product.title,
+                price: finalPrice,
+                image_url: productImages[0] ?? product.image_url ?? null,
+                selectedVariant: selectedVariantData
+                    ? `${selectedVariantData.variant_type}: ${selectedVariantData.variant_value}`
+                    : undefined
+            })
+        }
         // Cerrar modal del producto y abrir checkout
         onOpenChange(false)
         // Pequeño delay para que se cierre el modal primero
@@ -285,16 +288,49 @@ export default function ProductDetailsModal({
                                 </div>
                             )}
 
-                            {/* Botones de acción */}
-                            <div className="pt-4 space-y-2">
+                            {/* Selector de cantidad y botón Comprar Ahora */}
+                            <div className="pt-4 space-y-3">
+                                {/* Selector de Cantidad */}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-700">Cantidad</span>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                            disabled={quantity <= 1 || isOutOfStock}
+                                            className="h-9 w-9 rounded-full border border-gray-300 flex items-center justify-center text-lg font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="w-8 text-center text-lg font-semibold">{quantity}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setQuantity(q => q + 1)}
+                                            disabled={isOutOfStock}
+                                            className="h-9 w-9 rounded-full border border-gray-300 flex items-center justify-center text-lg font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Subtotal */}
+                                {quantity > 1 && (
+                                    <div className="text-right text-sm text-gray-600">
+                                        Subtotal: <span className="font-semibold text-green-700">Q{(finalPrice * quantity).toFixed(2)}</span>
+                                    </div>
+                                )}
+
                                 {/* Botón Comprar Ahora */}
                                 <Button
                                     onClick={handleBuyNow}
                                     disabled={isOutOfStock}
                                     className="w-full bg-black hover:bg-gray-800 h-12 text-base"
                                 >
-                                    <Zap className="mr-2 h-5 w-5" />
-                                    Comprar Ahora
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="mr-2 h-5 w-5">
+                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                                    </svg>
+                                    Comprar Ahora por WhatsApp
                                 </Button>
 
                                 {/* Botón Agregar al Carrito */}
