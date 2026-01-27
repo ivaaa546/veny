@@ -43,7 +43,7 @@ export default async function NewProductPage() {
     return (
         <div className="container mx-auto px-4">
             <h1 className="text-3xl font-bold mb-6">Crear Nuevo Producto</h1>
-            <ProductForm userId={session.user.id} categories={categories} />
+            <ProductForm storeId={store.id} categories={categories} />
         </div>
     )
 }

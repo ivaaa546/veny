@@ -35,12 +35,12 @@ interface InitialData {
 }
 
 interface ProductFormProps {
-    userId: string
+    storeId: string
     categories: Array<{ id: string; name: string }>
     initialData?: InitialData
 }
 
-export default function ProductForm({ userId, categories, initialData }: ProductFormProps) {
+export default function ProductForm({ storeId, categories, initialData }: ProductFormProps) {
     const isEditMode = !!initialData
 
     const [loading, setLoading] = useState(false)
@@ -117,7 +117,7 @@ export default function ProductForm({ userId, categories, initialData }: Product
                 uploadFormData.append('file', file)
                 
                 // Subir a Cloudinary via Server Action
-                const result = await uploadImage(uploadFormData, `veny/products/${userId}`)
+                const result = await uploadImage(uploadFormData, `veny/stores/${storeId}/products`)
                 
                 if (!result.success || !result.url) {
                     throw new Error(result.error || 'Error al subir imagen')
@@ -129,7 +129,6 @@ export default function ProductForm({ userId, categories, initialData }: Product
             // 2. Serializar datos como JSON strings
             formData.set('images', JSON.stringify(imageUrls))
             formData.set('variants', JSON.stringify(variants))
-            formData.set('user_id', userId)
 
             // 3. Llamar al Server Action correspondiente
             if (isEditMode && initialData) {

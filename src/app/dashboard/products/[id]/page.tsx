@@ -105,7 +105,7 @@ export default async function EditProductPage({ params }: PageProps) {
             </div>
 
             <ProductForm
-                userId={session.user.id}
+                storeId={store.id}
                 categories={categories || []}
                 initialData={initialData}
             />
