@@ -197,7 +197,7 @@ export default function CheckoutDialog({
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                 <Truck className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
-                    <p className="font-medium text-amber-800">Pago contra entrega</p>
+                    <p className="font-medium text-amber-800">Pago contra entrega + Envío Gratis</p>
                     <p className="text-amber-700">Tiempo de entrega: 48-72 horas</p>
                 </div>
             </div>
@@ -340,8 +340,8 @@ export default function CheckoutDialog({
                                     disabled={loading}
                                     onClick={() => setLugarEntrega(option.value as LugarEntrega)}
                                     className={`flex-1 py-2 px-3 text-sm rounded-md border transition-all ${lugarEntrega === option.value
-                                            ? 'border-black bg-black text-white'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-black bg-black text-white'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     {option.label}
