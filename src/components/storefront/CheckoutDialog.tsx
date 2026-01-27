@@ -159,8 +159,8 @@ export default function CheckoutDialog({
             setOpen(false)
             resetForm()
 
-            // 5. Abrir WhatsApp
-            window.open(whatsappUrl, '_blank')
+            // 5. Abrir WhatsApp (usar location.href para compatibilidad con Safari iOS)
+            window.location.href = whatsappUrl
 
         } catch (error) {
             console.error('Error:', error)
