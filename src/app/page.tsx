@@ -37,7 +37,7 @@ export default function LandingPage() {
 
       <main className="flex-1 relative z-10">
         {/* Hero Section - 2 Columns */}
-        <section className="w-full py-12 md:py-24 lg:py-32 overflow-hidden">
+        <section className="w-full py-12 pb-24 md:py-24 md:pb-36 lg:py-32 lg:pb-44 overflow-hidden">
           <div className="container mx-auto px-6 md:px-12 lg:px-20">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 

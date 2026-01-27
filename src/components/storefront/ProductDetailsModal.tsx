@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Zap, Share2, Check } from 'lucide-react'
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import CheckoutDialog from './CheckoutDialog'
@@ -32,7 +33,7 @@ export default function ProductDetailsModal({
     const [selectedVariant, setSelectedVariant] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
     const [checkoutOpen, setCheckoutOpen] = useState(false)
-    
+
     const cart = useCart()
 
     // Usar imágenes de la relación o fallback a image_url del producto
@@ -58,7 +59,7 @@ export default function ProductDetailsModal({
     // Calcular si el producto está agotado
     const hasVariants = variants.length > 0
     const isOutOfStock = hasVariants
-        ? selectedVariantData 
+        ? selectedVariantData
             ? (selectedVariantData.stock || 0) <= 0
             : variants.every(v => (v.stock || 0) <= 0)
         : false
@@ -86,7 +87,7 @@ export default function ProductDetailsModal({
     // Manejar "Compartir"
     const handleShare = async () => {
         const url = `${window.location.origin}/${storeSlug}#producto-${product.id}`
-        
+
         try {
             await navigator.clipboard.writeText(url)
             setCopied(true)
@@ -114,6 +115,10 @@ export default function ProductDetailsModal({
             selectedVariant: selectedVariantData
                 ? `${selectedVariantData.variant_type}: ${selectedVariantData.variant_value}`
                 : undefined
+        })
+        toast.success('Agregado al carrito', {
+            description: `${product.title} ${selectedVariantData ? `(${selectedVariantData.variant_value})` : ''}`,
+            duration: 2000,
         })
     }
 
@@ -266,7 +271,7 @@ export default function ProductDetailsModal({
                                     <Zap className="mr-2 h-5 w-5" />
                                     Comprar Ahora
                                 </Button>
-                                
+
                                 {/* Botón Agregar al Carrito */}
                                 <Button
                                     onClick={handleAddToCart}

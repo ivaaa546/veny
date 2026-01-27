@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "goveny",
   description: "Crea tu tienda online y vende más",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

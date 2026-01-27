@@ -1,6 +1,7 @@
 'use client'
 
-import { ShoppingBag, Trash2, Minus, Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ShoppingBag, Trash2, Minus, Plus, ArrowRight } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -16,6 +17,15 @@ interface CartSidebarProps {
 
 export default function CartSidebar({ storeId, storePhone, children }: CartSidebarProps) {
     const cart = useCart()
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
+    if (!isMounted) {
+        return null
+    }
 
     // Calculamos el total
     const total = cart.items.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0)
@@ -57,7 +67,7 @@ export default function CartSidebar({ storeId, storePhone, children }: CartSideb
                                             <p className="text-sm font-semibold text-green-700 mt-1">
                                                 Q{(item.price * item.quantity).toFixed(2)}
                                             </p>
-                                            
+
                                             {/* Controles de cantidad */}
                                             <div className="flex items-center gap-2 mt-2">
                                                 <Button
@@ -97,7 +107,7 @@ export default function CartSidebar({ storeId, storePhone, children }: CartSideb
 
                 {/* Footer con Total y Botón */}
                 {cart.items.length > 0 && (
-                    <div className="border-t pt-4 mt-auto space-y-4">
+                    <div className="border-t pt-2 mt-auto space-y-2 px-4 pb-5">
                         <Separator />
                         <div className="flex justify-between font-bold text-lg">
                             <span>Total:</span>
@@ -108,8 +118,12 @@ export default function CartSidebar({ storeId, storePhone, children }: CartSideb
                             storePhone={storePhone}
                             total={total}
                         >
-<Button className="w-full bg-black hover:bg-gray-800 h-12 text-lg">
+                            <Button className="w-full h-14 text-lg font-bold rounded-xl shadow-xl shadow-black/10 
+                                               bg-gradient-to-r from-gray-900 via-black to-gray-900 
+                                               bg-[length:200%_auto] animate-gradient
+                                               hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
                                 Completar Pedido
+                                <ArrowRight className="ml-2 h-5 w-5 animate-pulse" />
                             </Button>
                         </CheckoutDialog>
                     </div>
