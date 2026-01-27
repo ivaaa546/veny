@@ -153,18 +153,23 @@ export default function ProductDetailsModal({
                         {/* Columna Izquierda: Imágenes */}
                         <div className="space-y-3">
                             {/* Imagen Principal */}
-                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
                                 {productImages.length > 0 ? (
                                     <img
                                         src={productImages[selectedImage]}
                                         alt={product.title}
                                         className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            e.currentTarget.parentElement?.classList.add('broken-image-fallback');
+                                        }}
                                     />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-gray-400">
-                                        Sin Foto
-                                    </div>
-                                )}
+                                ) : null}
+
+                                {/* Fallback visible only when image is hidden or missing */}
+                                <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-100 -z-10">
+                                    <span className="text-sm">Sin Foto</span>
+                                </div>
                             </div>
 
                             {/* Miniaturas (si hay múltiples imágenes) */}

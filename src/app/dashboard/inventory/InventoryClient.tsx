@@ -32,7 +32,7 @@ export default function InventoryClient({ inventory }: InventoryClientProps) {
     // Filtrar inventario
     const filteredInventory = inventory.filter(item => {
         // Filtro de búsqueda
-        const matchesSearch = searchTerm === '' || 
+        const matchesSearch = searchTerm === '' ||
             item.product_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.variant_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.variant_value.toLowerCase().includes(searchTerm.toLowerCase())
@@ -168,8 +168,8 @@ export default function InventoryClient({ inventory }: InventoryClientProps) {
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 bg-muted rounded-md overflow-hidden flex-shrink-0">
                                                     {item.product_image ? (
-                                                        <img 
-                                                            src={item.product_image} 
+                                                        <img
+                                                            src={item.product_image}
                                                             alt={item.product_title}
                                                             className="h-full w-full object-cover"
                                                         />
@@ -185,10 +185,17 @@ export default function InventoryClient({ inventory }: InventoryClientProps) {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-muted-foreground">{item.variant_type}</span>
-                                                <span className="font-medium">{item.variant_value}</span>
-                                            </div>
+                                            {item.is_product ? (
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground">Tipo</span>
+                                                    <span className="font-medium text-blue-600">Producto base</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground">{item.variant_type}</span>
+                                                    <span className="font-medium">{item.variant_value}</span>
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <span className="font-semibold">Q{finalPrice.toFixed(2)}</span>

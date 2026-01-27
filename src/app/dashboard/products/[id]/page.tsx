@@ -81,6 +81,7 @@ export default async function EditProductPage({ params }: PageProps) {
         price: product.price,
         description: product.description || '',
         category_id: product.category_id || '',
+        stock: product.stock || 0,
         variants: (product.product_variants || []).map((v: { variant_type: string; variant_value: string; price_adjustment: number; stock: number }) => ({
             type: v.variant_type,
             value: v.variant_value,

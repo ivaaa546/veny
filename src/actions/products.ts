@@ -75,12 +75,13 @@ export async function createProduct(formData: FormData) {
     // 5. Insertar el producto BASE y obtener su ID
     const { data: newProduct, error: productError } = await supabase
         .from('products')
-        .insert({
+.insert({
             title,
             price,
             description: description || null,
             category_id: categoryId || null,
             store_id: store.id,
+            stock: variants.length === 0 ? parseInt(formData.get('stock') as string) || 0 : null,
             is_active: true
         })
         .select('id')
@@ -246,11 +247,12 @@ export async function updateProduct(formData: FormData) {
     // 4. Actualizar el producto BASE
     const { error: productError } = await supabase
         .from('products')
-        .update({
+.update({
             title,
             price,
             description: description || null,
             category_id: categoryId || null,
+            stock: variants.length === 0 ? parseInt(formData.get('stock') as string) || 0 : null,
         })
         .eq('id', productId)
 

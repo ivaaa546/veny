@@ -30,6 +30,7 @@ interface InitialData {
     price: number
     description: string
     category_id: string
+    stock?: number
     variants: Variant[]
     images: ExistingImage[]
 }
@@ -115,14 +116,14 @@ export default function ProductForm({ storeId, categories, initialData }: Produc
                 // Crear FormData para cada archivo
                 const uploadFormData = new FormData()
                 uploadFormData.append('file', file)
-                
+
                 // Subir a Cloudinary via Server Action
                 const result = await uploadImage(uploadFormData, `veny/stores/${storeId}/products`)
-                
+
                 if (!result.success || !result.url) {
                     throw new Error(result.error || 'Error al subir imagen')
                 }
-                
+
                 imageUrls.push(result.url)
             }
 
@@ -148,7 +149,7 @@ export default function ProductForm({ storeId, categories, initialData }: Produc
             const errorMessage = error instanceof Error ? error.message : 'Error al guardar el producto'
             // Usar un toast en lugar de alert si es posible, o simplemente filtrar este error
             if (!errorMessage.includes('NEXT_REDIRECT')) {
-                 alert(errorMessage)
+                alert(errorMessage)
             }
         } finally {
             setLoading(false)
@@ -351,6 +352,20 @@ export default function ProductForm({ storeId, categories, initialData }: Produc
                     )}
                 </CardContent>
             </Card>
+
+            {variants.length === 0 && (
+                <div className="space-y-2">
+                    <Label htmlFor="stock">Stock del Producto</Label>
+                    <Input
+                        id="stock"
+                        name="stock"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        defaultValue={initialData?.stock ?? ''}
+                    />
+                </div>
+            )}
 
             {/* Categoría */}
             <div className="space-y-2">
