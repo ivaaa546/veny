@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,23 +41,24 @@ interface CheckoutDialogProps {
 
 type LugarEntrega = 'casa' | 'trabajo' | 'otro'
 
-export default function CheckoutDialog({ 
-    storeId, 
-    storePhone, 
-    total, 
+export default function CheckoutDialog({
+    storeId,
+    storePhone,
+    total,
     children,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange
 }: CheckoutDialogProps) {
     // Estado interno para modo no controlado
     const [internalOpen, setInternalOpen] = useState(false)
-    
+
     // Determinar si estamos en modo controlado
     const isControlled = controlledOpen !== undefined
     const open = isControlled ? controlledOpen : internalOpen
-    const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen
+    const setOpen = isControlled ? (controlledOnOpenChange || (() => { })) : setInternalOpen
 
     const [loading, setLoading] = useState(false)
+    const [showErrors, setShowErrors] = useState(false)
     const cart = useCart()
 
     // Estados del formulario
@@ -81,7 +83,7 @@ export default function CheckoutDialog({
     const generateWhatsAppMessage = (items: CartItem[]) => {
         const nombreDepartamento = getNombreDepartamento(departamento)
         const lugarTexto = lugarEntrega === 'casa' ? 'Casa' : lugarEntrega === 'trabajo' ? 'Trabajo' : 'Otro lugar'
-        
+
         let message = `*NUEVO PEDIDO*\n\n`
         message += `*Cliente:* ${nombre} ${apellido}\n`
         message += `*Teléfono:* ${telefono}\n\n`
@@ -113,20 +115,20 @@ export default function CheckoutDialog({
     }
 
     // Validación del formulario
-    const isFormValid = 
-        nombre.trim() && 
-        apellido.trim() && 
-        telefono.trim() && 
-        departamento && 
+    const isFormValid =
+        nombre.trim() &&
+        apellido.trim() &&
+        telefono.trim() &&
+        departamento &&
         municipio &&
         zona.trim()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        
+
         // Validaciones
         if (!isFormValid) {
-            alert('Por favor completa todos los campos requeridos')
+            setShowErrors(true)
             return
         }
 
@@ -190,7 +192,7 @@ export default function CheckoutDialog({
                     Ingresa tus datos para completar el pedido.
                 </DialogDescription>
             </DialogHeader>
-            
+
             {/* Mensaje de pago contra entrega */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                 <Truck className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -214,6 +216,9 @@ export default function CheckoutDialog({
                                 value={nombre}
                                 onChange={(e) => setNombre(e.target.value)}
                                 disabled={loading}
+                                className={cn(
+                                    showErrors && !nombre.trim() && "border-red-500"
+                                )}
                                 required
                             />
                         </div>
@@ -227,6 +232,9 @@ export default function CheckoutDialog({
                                 value={apellido}
                                 onChange={(e) => setApellido(e.target.value)}
                                 disabled={loading}
+                                className={cn(
+                                    showErrors && !apellido.trim() && "border-red-500"
+                                )}
                                 required
                             />
                         </div>
@@ -244,6 +252,9 @@ export default function CheckoutDialog({
                             value={telefono}
                             onChange={(e) => setTelefono(e.target.value)}
                             disabled={loading}
+                            className={cn(
+                                showErrors && !telefono.trim() && "border-red-500"
+                            )}
                             required
                         />
                     </div>
@@ -254,12 +265,12 @@ export default function CheckoutDialog({
                             <Label>
                                 Departamento <span className="text-red-500">*</span>
                             </Label>
-                            <Select 
-                                value={departamento} 
+                            <Select
+                                value={departamento}
                                 onValueChange={handleDepartamentoChange}
                                 disabled={loading}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className={cn(showErrors && !departamento && "border-red-500")}>
                                     <SelectValue placeholder="Selecciona" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -275,12 +286,12 @@ export default function CheckoutDialog({
                             <Label>
                                 Municipio <span className="text-red-500">*</span>
                             </Label>
-                            <Select 
-                                value={municipio} 
+                            <Select
+                                value={municipio}
                                 onValueChange={setMunicipio}
                                 disabled={loading || !departamento}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className={cn(showErrors && !municipio && "border-red-500")}>
                                     <SelectValue placeholder={departamento ? "Selecciona" : "Primero el depto."} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -305,6 +316,9 @@ export default function CheckoutDialog({
                             value={zona}
                             onChange={(e) => setZona(e.target.value)}
                             disabled={loading}
+                            className={cn(
+                                showErrors && !zona.trim() && "border-red-500"
+                            )}
                             required
                         />
                     </div>
@@ -325,11 +339,10 @@ export default function CheckoutDialog({
                                     type="button"
                                     disabled={loading}
                                     onClick={() => setLugarEntrega(option.value as LugarEntrega)}
-                                    className={`flex-1 py-2 px-3 text-sm rounded-md border transition-all ${
-                                        lugarEntrega === option.value
+                                    className={`flex-1 py-2 px-3 text-sm rounded-md border transition-all ${lugarEntrega === option.value
                                             ? 'border-black bg-black text-white'
                                             : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     {option.label}
                                 </button>
@@ -373,7 +386,7 @@ export default function CheckoutDialog({
                     </Button>
                     <Button
                         type="submit"
-                        disabled={loading || !isFormValid}
+                        disabled={loading}
                         className="bg-black hover:bg-gray-800"
                     >
                         {loading ? (
@@ -389,8 +402,8 @@ export default function CheckoutDialog({
                         )}
                     </Button>
                 </DialogFooter>
-            </form>
-        </DialogContent>
+            </form >
+        </DialogContent >
     )
 
     // Modo controlado: sin DialogTrigger
