@@ -86,13 +86,13 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
             if (logoFile) {
                 const uploadFormData = new FormData()
                 uploadFormData.append('file', logoFile)
-                
+
                 const result = await uploadImage(uploadFormData, `veny/stores/${store.id}/logos`)
-                
+
                 if (!result.success || !result.url) {
                     throw new Error(result.error || 'Error al subir el logo')
                 }
-                
+
                 formData.set('logo_url', result.url)
             }
 
@@ -100,13 +100,13 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
             if (bannerFile) {
                 const uploadFormData = new FormData()
                 uploadFormData.append('file', bannerFile)
-                
+
                 const result = await uploadImage(uploadFormData, `veny/stores/${store.id}/banners`)
-                
+
                 if (!result.success || !result.url) {
                     throw new Error(result.error || 'Error al subir el banner')
                 }
-                
+
                 formData.set('banner_url', result.url)
             }
 
@@ -185,7 +185,7 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
 
                     {/* Sección del Logo */}
                     <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-muted/30">
-                        <Avatar className="h-24 w-24">
+                        <Avatar className="h-24 w-24 rounded-full">
                             {logoPreview ? (
                                 <AvatarImage src={logoPreview} alt={name} />
                             ) : null}
@@ -282,7 +282,7 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
                     {/* Redes Sociales */}
                     <div className="space-y-4 pt-4 border-t">
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Redes Sociales</h3>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="instagram" className="flex items-center gap-2">
                                 <Instagram className="h-4 w-4 text-pink-600" />

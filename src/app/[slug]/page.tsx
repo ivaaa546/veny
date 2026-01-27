@@ -54,9 +54,9 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
     return (
         <div className="min-h-screen bg-gray-50/50 relative">
-            
+
             {/* 1. NAVBAR */}
-            <StoreNavbar 
+            <StoreNavbar
                 storeId={store.id}
                 storeName={store.name}
                 storePhone={store.phone}
@@ -76,9 +76,9 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             <div className="container mx-auto px-6 md:px-12 lg:px-20 relative z-10 -mt-12 mb-10">
                 <div className="bg-white rounded-xl shadow-md border border-slate-100 p-5 md:p-6 flex flex-col md:flex-row items-center gap-5 max-w-5xl mx-auto">
                     <div className="relative shrink-0">
-                        <Avatar className="h-16 w-16 md:h-20 md:w-20 rounded-xl border-4 border-white shadow-sm bg-white">
+                        <Avatar className="h-16 w-16 md:h-20 md:w-20 rounded-full border-4 border-white shadow-sm bg-white">
                             {store.logo_url && <AvatarImage src={store.logo_url} alt={store.name} className="object-cover" />}
-                            <AvatarFallback className="text-lg bg-slate-100 text-green-600 rounded-xl font-bold">
+                            <AvatarFallback className="text-lg bg-slate-100 text-green-600 rounded-full font-bold">
                                 <Store className="h-8 w-8" />
                             </AvatarFallback>
                         </Avatar>
@@ -115,7 +115,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                                     </a>
                                 </Button>
                             )}
-                            
+
                             {/* Botón de WhatsApp - Estilo Outline igual a los demás */}
                             <Button size="icon" variant="outline" className="rounded-full h-9 w-9 border-slate-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 shadow-sm shrink-0" asChild>
                                 <a href={`https://wa.me/${formatPhoneForWhatsApp(store.phone)}`} target="_blank" rel="noopener noreferrer">
@@ -135,10 +135,10 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
                         <p className="text-slate-500 text-sm">Sin productos aún.</p>
                     </div>
                 ) : (
-                    <StoreProducts 
-                        products={products} 
-                        categories={categories} 
-                        productImages={productImages} 
+                    <StoreProducts
+                        products={products}
+                        categories={categories}
+                        productImages={productImages}
                         productVariants={productVariants}
                         storeId={store.id}
                         storePhone={store.phone}
