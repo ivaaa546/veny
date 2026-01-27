@@ -27,6 +27,7 @@ export interface Store {
     instagram_url: string | null;
     facebook_url: string | null;
     tiktok_url: string | null;
+    facebook_pixel_id: string | null; // ID del Pixel de Facebook para tracking
     created_at: string;
     updated_at: string;
 }

@@ -4,8 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Zap, Share2, Check } from 'lucide-react'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCart } from '@/hooks/use-cart'
+import { trackViewContent, trackAddToCart } from '@/hooks/use-facebook-pixel'
 import CheckoutDialog from './CheckoutDialog'
 
 interface ProductDetailsModalProps {
@@ -55,6 +56,17 @@ export default function ProductDetailsModal({
         acc[variant.variant_type].push(variant)
         return acc
     }, {})
+
+    // Track ViewContent cuando se abre el modal
+    useEffect(() => {
+        if (open && product) {
+            trackViewContent({
+                id: product.id,
+                title: product.title,
+                price: product.price,
+            })
+        }
+    }, [open, product])
 
     // Calcular si el producto está agotado
     const hasVariants = variants.length > 0
@@ -116,6 +128,14 @@ export default function ProductDetailsModal({
                 ? `${selectedVariantData.variant_type}: ${selectedVariantData.variant_value}`
                 : undefined
         })
+
+        // Track AddToCart event
+        trackAddToCart({
+            id: product.id,
+            title: product.title,
+            price: finalPrice,
+        }, 1)
+
         toast.success('Agregado al carrito', {
             description: `${product.title} ${selectedVariantData ? `(${selectedVariantData.variant_value})` : ''}`,
             duration: 2000,

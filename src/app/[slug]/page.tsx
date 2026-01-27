@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { Metadata } from 'next'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { formatPhoneForWhatsApp } from '@/lib/phone'
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import StoreProducts from '@/components/storefront/StoreProducts'
 import StoreNavbar from '@/components/storefront/StoreNavbar'
+import FacebookPixel from '@/components/analytics/FacebookPixel'
 import { Phone, Store, MapPin, Smartphone, Instagram, Facebook, Video } from 'lucide-react'
 
 // --- DATA FETCHING ---
@@ -32,6 +34,60 @@ function getInitials(name: string) {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
 }
 
+// --- METADATA GENERATION (Open Graph) ---
+type Props = {
+    params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { slug } = await params
+    const data = await getStoreData(slug)
+
+    if (!data || 'redirect' in data || 'inactive' in data) {
+        return {
+            title: 'Tienda no encontrada | goveny',
+            description: 'Esta tienda no está disponible.',
+        }
+    }
+
+    const { store } = data
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://goveny.com'
+
+    return {
+        title: `${store.name} | goveny`,
+        description: store.description || `Visita ${store.name} y descubre sus productos. Haz tus pedidos fácilmente por WhatsApp.`,
+        openGraph: {
+            title: store.name,
+            description: store.description || `Visita ${store.name} y descubre sus productos.`,
+            url: `${baseUrl}/${store.slug}`,
+            siteName: 'goveny',
+            images: store.banner_url ? [
+                {
+                    url: store.banner_url,
+                    width: 1200,
+                    height: 630,
+                    alt: store.name,
+                }
+            ] : store.logo_url ? [
+                {
+                    url: store.logo_url,
+                    width: 400,
+                    height: 400,
+                    alt: store.name,
+                }
+            ] : [],
+            locale: 'es_GT',
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: store.name,
+            description: store.description || `Visita ${store.name} y descubre sus productos.`,
+            images: store.banner_url ? [store.banner_url] : store.logo_url ? [store.logo_url] : [],
+        },
+    }
+}
+
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
     const data = await getStoreData(slug)
@@ -54,6 +110,11 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
     return (
         <div className="min-h-screen bg-gray-100 relative">
+
+            {/* Facebook Pixel */}
+            {store.facebook_pixel_id && (
+                <FacebookPixel pixelId={store.facebook_pixel_id} />
+            )}
 
             {/* 1. NAVBAR */}
             <StoreNavbar

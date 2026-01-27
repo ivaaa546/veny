@@ -23,6 +23,7 @@ interface StoreData {
     instagram_url?: string | null
     facebook_url?: string | null
     tiktok_url?: string | null
+    facebook_pixel_id?: string | null
 }
 
 interface StoreSettingsFormProps {
@@ -41,6 +42,7 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
     const [instagram, setInstagram] = useState(store.instagram_url || '')
     const [facebook, setFacebook] = useState(store.facebook_url || '')
     const [tiktok, setTiktok] = useState(store.tiktok_url || '')
+    const [facebookPixelId, setFacebookPixelId] = useState(store.facebook_pixel_id || '')
 
     // Estados para el logo
     const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -81,6 +83,7 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
             formData.set('instagram_url', instagram)
             formData.set('facebook_url', facebook)
             formData.set('tiktok_url', tiktok)
+            formData.set('facebook_pixel_id', facebookPixelId)
 
             // Subir logo si hay uno nuevo (usando Cloudinary)
             if (logoFile) {
@@ -320,6 +323,30 @@ export default function StoreSettingsForm({ store }: StoreSettingsFormProps) {
                                 value={tiktok}
                                 onChange={(e) => setTiktok(e.target.value)}
                             />
+                        </div>
+                    </div>
+
+                    {/* Facebook Pixel (Analytics) */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Análisis y Publicidad</h3>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="facebook_pixel_id" className="flex items-center gap-2">
+                                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 text-blue-600">
+                                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
+                                </svg>
+                                Facebook Pixel ID
+                            </Label>
+                            <Input
+                                id="facebook_pixel_id"
+                                placeholder="123456789012345"
+                                value={facebookPixelId}
+                                onChange={(e) => setFacebookPixelId(e.target.value.replace(/\D/g, ''))}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Encuentra tu Pixel ID en <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Meta Business Suite → Events Manager</a>.
+                                Esto te permite medir conversiones de tus anuncios de Facebook e Instagram.
+                            </p>
                         </div>
                     </div>
 

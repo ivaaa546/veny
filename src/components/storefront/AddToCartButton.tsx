@@ -1,6 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/use-cart'
+import { trackAddToCart } from '@/hooks/use-facebook-pixel'
 import { toast } from 'sonner'
 
 interface AddToCartButtonProps {
@@ -13,7 +14,7 @@ export default function AddToCartButton({ product, disabled = false }: AddToCart
 
     const handleAddToCart = () => {
         if (disabled) return
-        
+
         // Limpiar el objeto del producto para solo incluir los campos necesarios
         const cleanProduct = {
             id: product.id,
@@ -24,6 +25,14 @@ export default function AddToCartButton({ product, disabled = false }: AddToCart
         }
 
         cart.addItem(cleanProduct)
+
+        // Track AddToCart event
+        trackAddToCart({
+            id: product.id,
+            title: product.title,
+            price: Number(product.price),
+        }, 1)
+
         toast.success('Agregado al carrito', {
             description: product.title,
             duration: 2000,

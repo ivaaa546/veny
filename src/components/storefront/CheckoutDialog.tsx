@@ -23,6 +23,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useCart, CartItem } from '@/hooks/use-cart'
+import { trackInitiateCheckout, trackPurchase, trackContact } from '@/hooks/use-facebook-pixel'
 import { formatPhoneForWhatsApp } from '@/lib/phone'
 import { listaDepartamentos, getMunicipios, getNombreDepartamento } from '@/lib/guatemala'
 import { Loader2, CheckCircle, Truck } from 'lucide-react'
@@ -79,6 +80,21 @@ export default function CheckoutDialog({
         setDepartamento(value)
         setMunicipio('') // Reset municipio
     }
+
+    // Track InitiateCheckout cuando se abre el dialog
+    useEffect(() => {
+        if (open && cart.items.length > 0) {
+            trackInitiateCheckout(
+                cart.items.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    price: Number(item.price),
+                    quantity: item.quantity,
+                })),
+                total
+            )
+        }
+    }, [open, cart.items, total])
 
     const generateWhatsAppMessage = (items: CartItem[]) => {
         const nombreDepartamento = getNombreDepartamento(departamento)
@@ -154,14 +170,29 @@ export default function CheckoutDialog({
             const formattedPhone = formatPhoneForWhatsApp(storePhone)
             const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`
 
-            // 3. Limpiar carrito
+            // 3. Track Purchase event
+            trackPurchase(
+                `order-${Date.now()}`, // Placeholder order ID, ya que createOrder no devuelve ID
+                total,
+                cart.items.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    price: Number(item.price),
+                    quantity: item.quantity,
+                }))
+            )
+
+            // 4. Track Contact event (WhatsApp)
+            trackContact()
+
+            // 5. Limpiar carrito
             cart.clearCart()
 
-            // 4. Cerrar dialog y resetear form
+            // 6. Cerrar dialog y resetear form
             setOpen(false)
             resetForm()
 
-            // 5. Abrir WhatsApp (usar location.href para compatibilidad con Safari iOS)
+            // 7. Abrir WhatsApp (usar location.href para compatibilidad con Safari iOS)
             window.location.href = whatsappUrl
 
         } catch (error) {

@@ -169,6 +169,7 @@ export async function updateStoreSettings(formData: FormData) {
     const instagram_url = formData.get('instagram_url') as string
     const facebook_url = formData.get('facebook_url') as string
     const tiktok_url = formData.get('tiktok_url') as string
+    const facebook_pixel_id = formData.get('facebook_pixel_id') as string
 
     if (!storeId || !name) {
         throw new Error('Faltan datos obligatorios')
@@ -179,7 +180,7 @@ export async function updateStoreSettings(formData: FormData) {
         const slugRegex = /^[a-z0-9-]+$/
         if (!slugRegex.test(slug)) {
             throw new Error('El link solo puede tener letras minúsculas, números y guiones')
-        } 
+        }
 
         // Verificar si el slug ya está usado por otra tienda
         const { data: existingStore } = await supabase
@@ -270,12 +271,13 @@ export async function updateStoreSettings(formData: FormData) {
         instagram_url: instagram_url || null,
         facebook_url: facebook_url || null,
         tiktok_url: tiktok_url || null,
+        facebook_pixel_id: facebook_pixel_id || null,
     }
 
     // Solo actualizar logo si viene uno nuevo
     if (logoUrl) {
         updateData.logo_url = logoUrl
-        
+
         // Si hay un logo antiguo y es diferente al nuevo, eliminarlo de Cloudinary
         if (currentStoreData?.logo_url && currentStoreData.logo_url !== logoUrl) {
             await deleteImage(currentStoreData.logo_url)
@@ -285,7 +287,7 @@ export async function updateStoreSettings(formData: FormData) {
     // Solo actualizar banner si viene uno nuevo
     if (bannerUrl) {
         updateData.banner_url = bannerUrl
-        
+
         // Si hay un banner antiguo y es diferente al nuevo, eliminarlo de Cloudinary
         if (currentStoreData?.banner_url && currentStoreData.banner_url !== bannerUrl) {
             await deleteImage(currentStoreData.banner_url)
